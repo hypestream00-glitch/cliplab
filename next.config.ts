@@ -31,7 +31,7 @@ if (process.env.NODE_ENV === "production") {
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["pino", "bullmq", "ioredis", "@prisma/client", "prisma", "@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
+  serverExternalPackages: ["pino", "bullmq", "ioredis", "@prisma/client", "@prisma/adapter-pg", "pg", "prisma", "@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
   experimental: {
     serverActions: {
       bodySizeLimit: UPLOAD_BODY_SIZE_LIMIT,

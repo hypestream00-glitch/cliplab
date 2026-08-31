@@ -7,6 +7,7 @@ import { createInfraProbeWorker } from "@/workers/infra-probe";
 import { recoverPersistedJobs } from "@/lib/services/job-recovery";
 import { enqueueDueScheduledPublications } from "@/lib/services/publishing";
 import { shouldEmbedWorkers } from "@/lib/queue/runtime";
+import { isNextBuildPhase } from "@/lib/env/build-phase";
 import { beatWorker } from "@/lib/queue/heartbeat";
 import { processEmailOutbox } from "@/lib/email/outbox";
 import { prisma } from "@/lib/db/prisma";
@@ -66,6 +67,7 @@ export function stopClipLabWorkers() {
 }
 
 export function ensureDevWorkers() {
+  if (isNextBuildPhase()) return;
   if (!shouldEmbedWorkers()) return;
   startClipLabWorkers();
 }

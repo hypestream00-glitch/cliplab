@@ -1,5 +1,7 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === "edge") return;
+  const { isNextBuildPhase } = await import("./lib/env/build-phase");
+  if (isNextBuildPhase()) return;
   const { essentialEnvErrors, validateProcessEnv } = await import("./lib/env/schema");
   const { logger } = await import("./lib/logger");
   const { ensureDevWorkers } = await import("./lib/queue/boot");

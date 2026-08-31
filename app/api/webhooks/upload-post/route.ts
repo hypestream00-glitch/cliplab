@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { handleUploadPostWebhook } from "@/lib/social/upload-post/webhooks";
 import { logger } from "@/lib/logger";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
   const signature = request.headers.get("x-upload-post-signature");

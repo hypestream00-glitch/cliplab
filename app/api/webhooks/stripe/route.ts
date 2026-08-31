@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { handleStripeWebhook } from "@/lib/billing/webhook";
 import { logger } from "@/lib/logger";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
   const signature = request.headers.get("stripe-signature");

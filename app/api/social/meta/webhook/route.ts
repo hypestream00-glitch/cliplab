@@ -6,6 +6,9 @@ import { isPrismaUniqueViolation } from "@/lib/webhooks/idempotency";
 import { prisma } from "@/lib/db/prisma";
 import { createHash } from "node:crypto";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const mode = request.nextUrl.searchParams.get("hub.mode");
   const token = request.nextUrl.searchParams.get("hub.verify_token");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateProcessEnv, essentialEnvErrors } from "@/lib/env/schema";
+import { validateProcessEnv, essentialEnvErrors, RUNTIME_ESSENTIAL_KEYS } from "@/lib/env/schema";
 import { featureFlags } from "@/lib/features/flags";
 import { featureState, getFeatureAvailability } from "@/lib/features/availability";
 import { oauthCallbackUrl, oauthCallbackCatalog, mediaUrlIsSafeForExternalApis, publicBaseUrl } from "@/lib/env/app-url";
@@ -20,6 +20,7 @@ describe("env validation", () => {
     expect(result.issues.some((issue) => issue.key === "DATABASE_URL" && issue.essential)).toBe(false);
     expect(result.issues.some((issue) => issue.key === "TIKTOK_REDIRECT_URI" && !issue.essential)).toBe(true);
     expect(essentialEnvErrors({} as unknown as NodeJS.ProcessEnv).some((issue) => issue.key === "DATABASE_URL")).toBe(true);
+    expect(RUNTIME_ESSENTIAL_KEYS).toContain("DATABASE_URL");
   });
 
   it("treats falsey approval flags as not approved", () => {

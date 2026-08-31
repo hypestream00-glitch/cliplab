@@ -105,7 +105,10 @@ export type ParsedEnv = z.infer<typeof envSchema>;
 
 export type EnvIssue = { key: string; message: string; essential: boolean };
 
-const ESSENTIAL = new Set(["DATABASE_URL"]);
+/** Required to serve traffic and for `/api/ready`. Not required to compile `next build`. */
+export const RUNTIME_ESSENTIAL_KEYS = ["DATABASE_URL"] as const;
+
+const ESSENTIAL = new Set<string>(RUNTIME_ESSENTIAL_KEYS);
 
 export function validateProcessEnv(source: NodeJS.ProcessEnv = process.env) {
   const parsed = envSchema.safeParse(source);
@@ -121,4 +124,9 @@ export function validateProcessEnv(source: NodeJS.ProcessEnv = process.env) {
 
 export function essentialEnvErrors(source: NodeJS.ProcessEnv = process.env) {
   return validateProcessEnv(source).issues.filter((issue) => issue.essential);
+}
+
+/** Alias for production/runtime checks. Build must not call this to fail compilation. */
+export function essentialRuntimeEnvErrors(source: NodeJS.ProcessEnv = process.env) {
+  return essentialEnvErrors(source);
 }
