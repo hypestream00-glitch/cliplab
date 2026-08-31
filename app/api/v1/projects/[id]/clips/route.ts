@@ -3,6 +3,9 @@ import { authenticateApiKey } from "@/lib/api/auth";
 import { prisma } from "@/lib/db/prisma";
 import { visibleClipWhere, visibleProjectWhere } from "@/lib/data/visibility";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const key = await authenticateApiKey(request);
   if (!key) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

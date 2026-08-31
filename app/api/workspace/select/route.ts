@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const user = await requireUser();
   const { workspaceId } = (await request.json()) as { workspaceId?: string };

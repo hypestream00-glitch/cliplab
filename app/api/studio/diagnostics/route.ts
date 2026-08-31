@@ -3,6 +3,9 @@ import { requireWorkspaceContext } from "@/lib/auth/session";
 import { runConnectionProbe, type ProbeTarget } from "@/lib/diagnostics/probes";
 import { limitAction } from "@/lib/security/action-limit";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   await requireWorkspaceContext();
   const limited = await limitAction("diagnostics", 10, 60_000);

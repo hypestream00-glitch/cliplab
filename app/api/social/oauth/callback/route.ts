@@ -16,6 +16,9 @@ import { createMetaPending } from "@/lib/social/meta/pending";
 import { logger } from "@/lib/logger";
 import { limitAction } from "@/lib/security/action-limit";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 function accountsRedirect(request: Request, error?: string, connected?: string) {
   const path = error
     ? `/studio/accounts?error=${encodeURIComponent(error)}`

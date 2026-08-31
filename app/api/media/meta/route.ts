@@ -6,6 +6,7 @@ import { sanitizeKey } from "@/lib/storage/url";
 import { verifyMetaMedia } from "@/lib/social/meta/media-url";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const key = sanitizeKey(request.nextUrl.searchParams.get("key") ?? "");

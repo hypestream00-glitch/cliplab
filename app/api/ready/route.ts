@@ -6,6 +6,9 @@ import { isRedisConfigured, getSharedRedis } from "@/lib/queue/redis";
 import { s3Configured } from "@/lib/storage/s3";
 import { readinessBody } from "@/lib/health/payload";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const essential = essentialEnvErrors();
   let database: "ok" | "error" = "ok";

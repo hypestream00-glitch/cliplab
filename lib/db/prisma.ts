@@ -21,7 +21,7 @@ function createClient(): PrismaClient {
   });
 }
 
-/** Creates the client on first use. Importing this module does not open Postgres. */
+/** Creates the client on first real query. Importing this module does not open Postgres. */
 export function getPrisma(): PrismaClient {
   if (!globalForPrisma.prisma) {
     globalForPrisma.prisma = createClient();
@@ -33,8 +33,26 @@ export function resetPrismaClientForTests() {
   globalForPrisma.prisma = undefined;
 }
 
+function isThenableOrInspectProp(prop: PropertyKey) {
+  return (
+    prop === "then" ||
+    prop === "catch" ||
+    prop === "finally" ||
+    prop === "$$typeof" ||
+    prop === "__esModule" ||
+    prop === "toJSON" ||
+    typeof prop === "symbol"
+  );
+}
+
+/**
+ * Lazy singleton compatible with existing `prisma.model` call sites.
+ * `then` is intentionally undefined so Next.js/Turbopack cannot treat this
+ * export as a Promise and call getPrisma() while collecting route config.
+ */
 export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
   get(_target, prop) {
+    if (isThenableOrInspectProp(prop)) return undefined;
     const client = getPrisma();
     const value = Reflect.get(client, prop, client);
     return typeof value === "function" ? value.bind(client) : value;

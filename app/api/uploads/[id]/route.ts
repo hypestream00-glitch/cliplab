@@ -15,6 +15,9 @@ import { InsufficientCreditsError } from "@/lib/billing/credits";
 import { FFmpegUnavailableError } from "@/lib/ffmpeg";
 import { QueueUnavailableError } from "@/lib/queue";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireWorkspaceContext();
   const { id } = await params;

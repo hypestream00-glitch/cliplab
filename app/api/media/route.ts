@@ -6,6 +6,7 @@ import { authorizeMediaKey } from "@/lib/media/authorize";
 import { getStorage } from "@/lib/storage";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function contentDisposition(filename: string, download: boolean) {
   const safe = filename.replace(/[^\w.\-]+/g, "_");

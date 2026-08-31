@@ -18,6 +18,9 @@ import { YouTubeApiError } from "@/lib/social/youtube/http";
 import { limitAction } from "@/lib/security/action-limit";
 import { cookieSecure } from "@/lib/security/cookies";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const limited = await limitAction("oauth-start", 20, 60_000);
   if (!limited.ok) {

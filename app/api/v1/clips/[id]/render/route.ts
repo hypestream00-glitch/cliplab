@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db/prisma";
 import { clampExportResolution } from "@/lib/config/plans";
 import { getWorkspacePlanCode } from "@/lib/billing/usage";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const key = await authenticateApiKey(request);
   if (!key) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

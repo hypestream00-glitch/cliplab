@@ -5,6 +5,9 @@ import { createProject } from "@/lib/services/projects";
 import { clampClipCount } from "@/lib/config/plans";
 import { getWorkspacePlanCode } from "@/lib/billing/usage";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const schema = z.object({
   name: z.string().min(2),
   sourceUrl: z.string().url().optional(),

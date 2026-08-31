@@ -5,6 +5,9 @@ import { generateUploadPostConnectUrl } from "@/lib/social/upload-post/connect";
 import { UploadPostConfigError, UploadPostPlanError } from "@/lib/social/upload-post/errors";
 import { PlanLimitError, assertSocialAccountLimit } from "@/lib/billing/usage";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 function accountsError(request: Request, code: string) {
   return NextResponse.redirect(new URL(`/studio/accounts?error=${encodeURIComponent(code)}`, request.url));
 }

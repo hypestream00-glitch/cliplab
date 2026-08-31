@@ -6,6 +6,9 @@ import { PlanLimitError } from "@/lib/billing/usage";
 import { InvalidVideoError } from "@/lib/media/validate";
 import { newRequestId, publicErrorMessage } from "@/lib/observability/request-id";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const requestId = newRequestId();
   const limited = await rateLimitGuard("upload-init", 12, 60_000);
