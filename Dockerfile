@@ -3,6 +3,8 @@
 FROM node:22-bookworm AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY prisma.config.ts ./
+COPY prisma ./prisma
 RUN npm ci
 
 FROM node:22-bookworm AS builder
