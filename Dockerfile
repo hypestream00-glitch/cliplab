@@ -15,23 +15,30 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Compile without runtime secrets. Postgres is opened only by the running app.
 RUN npx prisma generate && npm run build
 
-FROM node:22-bookworm-slim AS runner
-WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/generated ./generated
-EXPOSE 3000
-CMD ["node", "server.js"]
-
+# Optional independent worker: docker build --target worker
 FROM builder AS worker
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 CMD ["npx", "tsx", "workers/index.ts"]
+
+# Default image (MUST be last): Next.js HTTP server for Railway web service.
+FROM node:22-bookworm-slim AS web
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+ENV CLIPLAB_EMBED_WORKERS=false
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/generated ./generated
+COPY --from=builder /app/scripts/start-web.mjs ./scripts/start-web.mjs
+EXPOSE 3000
+CMD ["node", "scripts/start-web.mjs"]
