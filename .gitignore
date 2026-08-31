@@ -1,0 +1,72 @@
+# See https://help.github.com/articles/ignoring-files/
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# build / caches
+/coverage
+/.next/
+/out/
+/build
+/.turbo
+*.tsbuildinfo
+next-env.d.ts
+/generated
+
+# secrets and env (never commit real values)
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+credentials.json
+**/service-account*.json
+**/google-credentials*.json
+
+# local database, dumps, backups
+/data
+/backups
+*.dump
+*.sql.bak
+*.sqlite
+*.sqlite3
+
+# local object storage and uploaded/processed media
+/storage
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+
+# logs and temp
+*.log
+npm-debug.log*
+.pnpm-debug.log*
+tmp/
+temp/
+.cache/
+
+# test artifacts
+/test-results
+/playwright-report
+/blob-report
+
+# OS / IDE
+.DS_Store
+.cursor/
+.vscode/
+*.swp
+
+# Vercel / local tooling
+.vercel
+.stripe/

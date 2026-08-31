@@ -1,0 +1,142 @@
+import { prisma } from "@/lib/db/prisma";
+import { getPlanLimits } from "@/lib/config/plans";
+import {
+  PlanLimitError,
+  processingIdempotencyKey,
+  secondsFromDurationMs,
+} from "@/lib/billing/usage-math";
+import { effectivePlanCode } from "@/lib/billing/stripe-status";
+
+export { PlanLimitError, secondsFromDurationMs, minutesFromSeconds, formatMinutesUsed, processingIdempotencyKey } from "@/lib/billing/usage-math";
+
+function periodStart(subscriptionStart?: Date | null) {
+  if (subscriptionStart) return subscriptionStart;
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+export async function getWorkspacePlanCode(workspaceId: string) {
+  const subscription = await prisma.subscription.findUnique({
+    where: { workspaceId },
+    include: { plan: true },
+  });
+  if (!subscription) return "FREE";
+  return effectivePlanCode({
+    planCode: subscription.plan.code,
+    status: subscription.status,
+    currentPeriodEnd: subscription.currentPeriodEnd,
+    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+    gracePeriodEndsAt: subscription.gracePeriodEndsAt,
+  });
+}
+
+export async function getMonthlyUsage(workspaceId: string) {
+  const subscription = await prisma.subscription.findUnique({
+    where: { workspaceId },
+    include: { plan: true },
+  });
+  const planCode = subscription
+    ? effectivePlanCode({
+        planCode: subscription.plan.code,
+        status: subscription.status,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+        gracePeriodEndsAt: subscription.gracePeriodEndsAt,
+      })
+    : "FREE";
+  const limits = getPlanLimits(planCode);
+  const start = periodStart(subscription?.currentPeriodStart ?? null);
+  const used = await prisma.usageEvent.aggregate({
+    where: { workspaceId, type: "VIDEO_PROCESSING", createdAt: { gte: start } },
+    _sum: { amountSeconds: true },
+  });
+  const usedSeconds = used._sum.amountSeconds ?? 0;
+  const limitSeconds = limits.monthlyMinutes * 60;
+  return {
+    usedSeconds,
+    limitSeconds,
+    remainingSeconds: Math.max(0, limitSeconds - usedSeconds),
+    limits,
+    periodStart: start,
+    periodEnd: subscription?.currentPeriodEnd ?? null,
+    status: subscription?.status ?? "ACTIVE",
+    storedPlanCode: subscription?.plan.code ?? "FREE",
+    effectivePlanCode: planCode,
+    cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
+  };
+}
+
+export async function assertMinutesAvailable(workspaceId: string, durationMs: number, projectId?: string) {
+  const usage = await getMonthlyUsage(workspaceId);
+  const needed = secondsFromDurationMs(durationMs);
+  let alreadyReserved = 0;
+  if (projectId) {
+    const existing = await prisma.usageEvent.findUnique({
+      where: { idempotencyKey: processingIdempotencyKey(projectId) },
+    });
+    alreadyReserved = existing?.amountSeconds ?? 0;
+  }
+  const projected = usage.usedSeconds - alreadyReserved + needed;
+  if (projected > usage.limitSeconds) {
+    throw new PlanLimitError("Você atingiu o limite do seu plano.");
+  }
+  if (needed > usage.limits.maxVideoDurationSeconds) {
+    throw new PlanLimitError("Este vídeo ultrapassa a duração máxima do seu plano.");
+  }
+  return needed;
+}
+
+export async function recordProcessingUsage(params: {
+  workspaceId: string;
+  projectId: string;
+  durationMs: number;
+}) {
+  const amountSeconds = secondsFromDurationMs(params.durationMs);
+  await prisma.usageEvent.upsert({
+    where: { idempotencyKey: processingIdempotencyKey(params.projectId) },
+    create: {
+      workspaceId: params.workspaceId,
+      projectId: params.projectId,
+      type: "VIDEO_PROCESSING",
+      amountSeconds,
+      idempotencyKey: processingIdempotencyKey(params.projectId),
+    },
+    update: {},
+  });
+  return amountSeconds;
+}
+
+export async function assertSocialAccountLimit(workspaceId: string) {
+  const code = await getWorkspacePlanCode(workspaceId);
+  const limits = getPlanLimits(code);
+  const used = await prisma.socialAccount.count({
+    where: { workspaceId, mock: false, status: { in: ["CONNECTED", "TOKEN_EXPIRING"] } },
+  });
+  if (used >= limits.maxAccounts) {
+    throw new PlanLimitError("Você atingiu o limite de contas sociais do seu plano.");
+  }
+}
+
+export async function assertWorkspaceJobQuota(workspaceId: string, kind: "generation" | "export") {
+  const planCode = await getWorkspacePlanCode(workspaceId);
+  const limits = getPlanLimits(planCode);
+  const max = kind === "generation" ? limits.maxConcurrentGeneration : limits.maxConcurrentExports;
+  const types =
+    kind === "generation"
+      ? (["VIDEO_IMPORT", "VIDEO_PROCESSING", "TRANSCRIPTION", "AI_ANALYSIS", "CLIP_GENERATION"] as const)
+      : (["RENDER"] as const);
+  const active = await prisma.processingJob.count({
+    where: {
+      workspaceId,
+      type: { in: [...types] },
+      status: { in: ["WAITING", "DELAYED", "ACTIVE"] },
+    },
+  });
+  if (active >= max) {
+    throw new PlanLimitError(
+      kind === "generation"
+        ? `Limite de processamentos simultâneos do plano (${max}). Aguarde a fila.`
+        : `Limite de renders simultâneos do plano (${max}). Aguarde a fila.`,
+    );
+  }
+}

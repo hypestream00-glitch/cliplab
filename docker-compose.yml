@@ -1,0 +1,33 @@
+# Dependências locais opcionais. O desenvolvimento atual também pode usar scripts/start-postgres.mjs.
+#
+# Conceito de escala (não faz deploy):
+#   web    → mesma imagem, comando: node server.js (Next standalone)
+#   worker → mesma codebase, comando: npm run worker
+# Ambos compartilham DATABASE_URL, REDIS_URL e storage S3/R2.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: cliplab
+      POSTGRES_PASSWORD: cliplab
+      POSTGRES_DB: cliplab
+    ports:
+      - "5432:5432"
+    volumes:
+      - cliplab_pg:/var/lib/postgresql/data
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+  # web:
+  #   build: { context: ., target: runner }
+  #   env_file: .env.local
+  #   ports: ["3000:3000"]
+  #   depends_on: [postgres, redis]
+  # worker:
+  #   build: { context: ., target: worker }
+  #   env_file: .env.local
+  #   command: npx tsx workers/index.ts
+  #   depends_on: [postgres, redis]
+volumes:
+  cliplab_pg:
