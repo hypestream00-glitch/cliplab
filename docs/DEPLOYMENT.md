@@ -46,7 +46,7 @@ Railway health checks must use **liveness**, not readiness. A 503 from `/ready` 
 | Service | Image target | Start | Public domain |
 |---|---|---|---|
 | `cliplab` (web) | default `web` | `npm run start` → `node scripts/start-web.mjs` | yes |
-| `cliplab-worker` (future) | `--target worker` or same image + `npm run worker` | `npm run worker` | no |
+| `cliplab-worker` | `Dockerfile.worker` | `npm run worker` → compiled `dist/worker.mjs` | no |
 
 Shared env: `DATABASE_URL`, `REDIS_URL`, R2, OpenAI, and the rest. Do not embed BullMQ in the web process (`CLIPLAB_EMBED_WORKERS=false`).
 
@@ -66,7 +66,7 @@ Default image (last stage, `web`): Next.js standalone via `node scripts/start-we
 - Listens on `PORT` (Railway injects this) or `3000`
 - Does **not** start BullMQ. Production web: `CLIPLAB_EMBED_WORKERS=false`
 
-Worker image: `docker build --target worker`. Command: `npm run worker` (`tsx workers/index.ts`). No public domain.
+Worker image: `docker build -f Dockerfile.worker .` (Railway Dockerfile path `/Dockerfile.worker`). Command: `npm run worker` → `node scripts/start-worker.mjs` (compiled `dist/worker.mjs`). No public domain. Does not start Next.js.
 
 Do not copy `.env.local` into the image. Runtime secrets come from the host.
 

@@ -1,6 +1,6 @@
 # Worker
 
-Processo separado: `npm run worker` (`workers/index.ts`).
+Processo separado: `npm run worker` (`scripts/start-worker.mjs` → `dist/worker.mjs` em produção, `tsx workers/index.ts` em desenvolvimento).
 
 - `CLIPLAB_EMBED_WORKERS=false` impede workers pesados no processo Next.js (dev e produção).
 - Produção: Redis obrigatório. Sem `REDIS_URL` o worker falha no preflight e não aceita jobs.

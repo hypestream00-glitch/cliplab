@@ -2,7 +2,7 @@
 #
 # Conceito de escala (não faz deploy):
 #   web    → mesma imagem (target web), comando: npm run start
-#   worker → mesma codebase (target worker), comando: npm run worker
+#   worker → Dockerfile.worker, comando: npm run worker
 # Ambos compartilham DATABASE_URL, REDIS_URL e storage S3/R2.
 services:
   postgres:
@@ -25,7 +25,7 @@ services:
   #   ports: ["3000:3000"]
   #   depends_on: [postgres, redis]
   # worker:
-  #   build: { context: ., target: worker }
+  #   build: { context: ., dockerfile: Dockerfile.worker }
   #   env_file: .env.local
   #   command: npm run worker
   #   depends_on: [postgres, redis]
