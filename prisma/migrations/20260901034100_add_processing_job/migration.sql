@@ -1,5 +1,6 @@
 -- Additive migration for production databases created via db push.
 -- Creates ProcessingJob and its enums only. Does not drop or alter existing tables or rows.
+-- Idempotent so a partially applied attempt can be retried after P3009 / --rolled-back.
 
 -- CreateEnum
 DO $$ BEGIN
@@ -16,7 +17,7 @@ EXCEPTION
 END $$;
 
 -- CreateTable
-CREATE TABLE "ProcessingJob" (
+CREATE TABLE IF NOT EXISTS "ProcessingJob" (
     "id" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
     "projectId" TEXT,
@@ -37,19 +38,27 @@ CREATE TABLE "ProcessingJob" (
 );
 
 -- CreateIndex
-CREATE INDEX "ProcessingJob_workspaceId_createdAt_idx" ON "ProcessingJob"("workspaceId", "createdAt");
+CREATE INDEX IF NOT EXISTS "ProcessingJob_workspaceId_createdAt_idx" ON "ProcessingJob"("workspaceId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "ProcessingJob_entityId_type_idx" ON "ProcessingJob"("entityId", "type");
+CREATE INDEX IF NOT EXISTS "ProcessingJob_entityId_type_idx" ON "ProcessingJob"("entityId", "type");
 
 -- CreateIndex
-CREATE INDEX "ProcessingJob_status_idx" ON "ProcessingJob"("status");
+CREATE INDEX IF NOT EXISTS "ProcessingJob_status_idx" ON "ProcessingJob"("status");
 
 -- CreateIndex
-CREATE INDEX "ProcessingJob_workspaceId_status_idx" ON "ProcessingJob"("workspaceId", "status");
+CREATE INDEX IF NOT EXISTS "ProcessingJob_workspaceId_status_idx" ON "ProcessingJob"("workspaceId", "status");
 
 -- AddForeignKey
-ALTER TABLE "ProcessingJob" ADD CONSTRAINT "ProcessingJob_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "ProcessingJob" ADD CONSTRAINT "ProcessingJob_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "ProcessingJob" ADD CONSTRAINT "ProcessingJob_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "ProcessingJob" ADD CONSTRAINT "ProcessingJob_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;

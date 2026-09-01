@@ -31,19 +31,26 @@ describe("Railway web image", () => {
     expect(startWeb).not.toContain("workers/index");
   });
 
-  it("runs prisma migrate deploy once before Next.js and never uses destructive prisma commands", () => {
+  it("runs prisma migrate deploy before Next.js, with P3009 recovery only for ProcessingJob", () => {
     expect(pkg.scripts["db:deploy"]).toBe("prisma migrate deploy");
     expect(pkg.dependencies.prisma).toBe("^7.10.0");
     expect(pkg.dependencies["@prisma/client"]).toBe("^7.10.0");
     expect(pkg.devDependencies?.prisma).toBeUndefined();
-    expect(startWeb).toContain('"migrate", "deploy"');
-    expect(startWeb).toContain("PRISMA MIGRATE DEPLOY: START");
-    expect(startWeb.indexOf("runPrismaMigrateDeploy()")).toBeLessThan(startWeb.indexOf("spawn(process.execPath, args"));
-    expect(startWeb).not.toContain("migrate dev");
+    expect(startWeb).toContain("runProductionMigrations()");
+    expect(startWeb).toContain("./prisma-migrate-production.mjs");
+    expect(startWeb.indexOf("runProductionMigrations()")).toBeLessThan(startWeb.indexOf("spawn(process.execPath, args"));
     expect(startWeb).not.toContain("migrate reset");
     expect(startWeb).not.toContain("db push");
+    expect(startWeb).not.toContain("--applied");
     expect(startWeb).not.toContain("npm install");
+    const migrateHelper = readFileSync("scripts/prisma-migrate-production.mjs", "utf8");
+    expect(migrateHelper).toContain('KNOWN_RECOVERABLE_MIGRATION = "20260901034100_add_processing_job"');
+    expect(migrateHelper).toContain('"--rolled-back"');
+    expect(migrateHelper).not.toContain("--applied");
+    expect(migrateHelper).not.toContain("migrate reset");
+    expect(migrateHelper).not.toContain("db push");
     expect(dockerfile).toContain("prisma.config.ts");
+    expect(dockerfile).toContain("prisma-migrate-production.mjs");
     expect(dockerfile).toContain("npm ci --omit=dev --ignore-scripts");
     expect(dockerfile).not.toContain("COPY --from=builder /app/node_modules/prisma");
     expect(dockerfile).not.toContain("migrate reset");

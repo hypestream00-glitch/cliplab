@@ -43,6 +43,7 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/generated ./generated
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/scripts/start-web.mjs ./scripts/start-web.mjs
+COPY --from=builder /app/scripts/prisma-migrate-production.mjs ./scripts/prisma-migrate-production.mjs
 RUN npm ci --omit=dev --ignore-scripts
 EXPOSE 3000
 CMD ["node", "scripts/start-web.mjs"]

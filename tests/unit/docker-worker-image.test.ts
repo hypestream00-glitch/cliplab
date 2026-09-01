@@ -14,6 +14,7 @@ describe("Railway worker image", () => {
     expect(dockerfile).not.toContain("next start");
     expect(dockerfile).not.toContain("start-web.mjs");
     expect(dockerfile).not.toContain("EXPOSE");
+    expect(dockerfile).not.toContain("migrate resolve");
     expect(dockerfile).not.toContain("migrate deploy");
     expect(dockerfile).not.toContain("migrate dev");
     expect(dockerfile).not.toContain("migrate reset");
@@ -33,6 +34,8 @@ describe("Railway worker image", () => {
     expect(startWorker).not.toContain("env: process.env");
     expect(startWorker).not.toContain("dotenv");
     expect(startWorker).not.toContain("migrate deploy");
+    expect(startWorker).not.toContain("migrate resolve");
+    expect(startWorker).not.toContain("prisma-migrate-production");
     expect(startWorker).not.toContain("migrate reset");
     expect(startWorker).not.toContain("db push");
   });
