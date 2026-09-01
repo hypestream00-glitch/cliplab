@@ -44,18 +44,18 @@ export default async function CompetitionsPage() {
           description="Quando um desafio for publicado, ele aparece aqui com ranking e prêmios."
         />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {items.map((item) => {
             const views = viewsByCompetition.get(item.id) ?? 0;
             return (
-              <article key={item.id} className="overflow-hidden rounded-2xl border bg-card hover:border-primary/40">
+              <article key={item.id} className="overflow-hidden rounded-2xl border border-gold/25 bg-card hover:border-gold/45">
                 {item.bannerUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.bannerUrl} alt="" className="h-28 w-full object-cover" />
                 ) : (
                   <div className="h-20 gradient-brand opacity-40" />
                 )}
-                <div className="p-4">
+                <div className="p-5">
                   <div className="flex items-start justify-between gap-2">
                     <h2 className="text-[15px] font-semibold">{item.name}</h2>
                     <CompetitionStatusBadge status={item.status} />
@@ -67,7 +67,7 @@ export default async function CompetitionsPage() {
                   <p className="mt-1 text-[12px] text-muted-foreground">
                     {item._count.participants} participantes · {views.toLocaleString("pt-BR")} views · {item.allowedPlatforms.join(", ")}
                   </p>
-                  <Link href={`/studio/competitions/${item.slug}`} className="mt-3 inline-flex h-9 items-center rounded-lg border px-3 text-[13px]">
+                  <Link href={`/studio/competitions/${item.slug}`} className="mt-4 inline-flex h-10 items-center rounded-xl gradient-brand px-4 text-[13px] font-semibold text-white">
                     Ver campeonato
                   </Link>
                 </div>

@@ -74,26 +74,23 @@ export default async function ClipsPage({ searchParams }: PageSearchProps) {
       <PageHeader title="Meus clips" description="Todos os clips gerados neste workspace." />
       <form className="mb-4 flex flex-wrap gap-2">
         <DebouncedSearch key={q} placeholder="Buscar clips" defaultValue={q} />
-        <select name="sort" defaultValue={sort} className="h-8 rounded-md border bg-transparent px-2 text-[13px]">
+        <select name="sort" defaultValue={sort} className="h-10 rounded-xl border border-border bg-surface px-3 text-[13px] text-white">
           <option value="recent">Mais recentes</option>
           <option value="score">Maior score</option>
           <option value="score-asc">Menor score</option>
           <option value="oldest">Mais antigos</option>
         </select>
         <input type="hidden" name="filter" value={filter} />
-        <button className="h-8 rounded-md border px-3 text-[13px]" type="submit">
+        <button className="h-10 rounded-xl border border-border px-4 text-[13px] font-medium text-white hover:bg-surface-hover" type="submit">
           Ordenar
         </button>
       </form>
-      <div className="mb-4 flex flex-wrap gap-1.5">
+      <div className="mb-5 flex flex-wrap gap-2">
         {filters.map((item) => (
           <Link
             key={item.id}
             href={`/studio/clips?filter=${item.id}${q ? `&q=${encodeURIComponent(q)}` : ""}&sort=${sort}`}
-            className={cn(
-              "rounded-full border px-3 py-1 text-[12px]",
-              filter === item.id ? "border-primary bg-primary/10 text-foreground" : "text-muted-foreground hover:text-foreground",
-            )}
+            className={cn("filter-chip", filter === item.id && "filter-chip-active")}
           >
             {item.label}
           </Link>
@@ -112,7 +109,7 @@ export default async function ClipsPage({ searchParams }: PageSearchProps) {
       ) : (
         <form action={bulkDownloadAction}>
           <BulkDownloadBar />
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {clips.map((clip) => (
               <ClipCard
                 key={clip.id}

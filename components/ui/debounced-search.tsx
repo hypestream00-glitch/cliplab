@@ -40,7 +40,7 @@ export function DebouncedSearch({
       onChange={onChange}
       placeholder={placeholder}
       aria-label={placeholder}
-      className="h-8 w-full max-w-sm rounded-md border bg-transparent px-2 text-[13px]"
+      className="h-10 w-full max-w-sm rounded-xl border border-border bg-surface px-3 text-[13px] text-white outline-none placeholder:text-text-secondary"
     />
   );
 }

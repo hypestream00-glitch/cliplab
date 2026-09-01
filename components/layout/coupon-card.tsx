@@ -25,7 +25,7 @@ export function CouponCard({ collapsed }: { collapsed: boolean }) {
       <button
         type="button"
         onClick={() => void copyCode()}
-        className="mx-auto flex size-9 items-center justify-center rounded-lg border border-yellow-500/40 bg-black text-yellow-400 glow-promo"
+        className="mx-auto flex size-10 items-center justify-center rounded-xl border border-gold/40 bg-black text-gold glow-promo"
         aria-label="Copiar cupom MUGAO12"
       >
         <Tag className="size-4" />
@@ -34,27 +34,28 @@ export function CouponCard({ collapsed }: { collapsed: boolean }) {
   }
 
   return (
-    <div className={cn("rounded-xl border border-yellow-500/40 bg-black p-3 glow-promo")}>
-      <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.14em] text-yellow-400 uppercase">
-        <Tag className="size-3.5" />
-        Cupom de desconto
+    <div className={cn("rounded-2xl border border-gold/50 bg-[rgba(234,179,8,0.07)] p-4 glow-promo")}>
+      <p className="text-[10px] font-semibold tracking-[0.18em] text-gold uppercase">
+        🏷 Cupom de desconto
       </p>
-      <p className="mt-1.5 text-[14px] font-semibold text-white">3 dias grátis</p>
-      <p className="mt-0.5 text-[11px] leading-4 text-zinc-400">Use o código abaixo e ganhe 3 dias grátis.</p>
-      <div className="mt-2 flex items-center gap-1.5">
+      <p className="mt-2 text-[16px] font-semibold text-white">3 dias grátis</p>
+      <p className="mt-1.5 text-[12px] leading-5 text-zinc-400">
+        Use o código abaixo e ganhe 3 dias grátis no plano Free!
+      </p>
+      <div className="mt-3 flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => void copyCode()}
-          className="flex h-8 flex-1 items-center justify-between rounded-md border border-yellow-500/30 bg-zinc-950 px-2 font-mono text-[13px] font-semibold tracking-wide text-yellow-300"
+          className="flex h-10 flex-1 items-center justify-between rounded-lg border border-gold/40 bg-black px-3 font-mono text-[13px] font-semibold tracking-wide text-yellow-300"
           aria-label="Copiar cupom MUGAO12"
         >
           {PUBLIC_PROMO_CODE}
-          <Copy className="size-3.5" />
+          <Copy className="size-3.5 text-gold" />
         </button>
       </div>
       <button
         type="button"
-        className="mt-2 text-[11px] text-yellow-500/90 underline-offset-2 hover:underline"
+        className="mt-2.5 text-[12px] text-gold underline-offset-2 hover:underline"
         onClick={() => setOpen(true)}
       >
         Como usar?

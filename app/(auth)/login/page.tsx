@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: PageSearchProps) {
       <div className="flex flex-1 items-center justify-center pb-16">
         <div className="w-full max-w-[400px]">
           <div className="mb-8 flex flex-col items-center text-center">
-            <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-[12px] font-semibold text-primary-foreground">
+            <span className="flex size-9 items-center justify-center rounded-lg gradient-brand text-[12px] font-semibold text-white">
               {brand.shortName}
             </span>
             <h1 className="mt-4 text-[26px] leading-8 font-semibold tracking-tight">Entrar</h1>

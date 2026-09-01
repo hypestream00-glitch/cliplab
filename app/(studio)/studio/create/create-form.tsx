@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { formatBytes, formatDuration } from "@/lib/utils/format";
 import { friendlyError } from "@/lib/ui/friendly-error";
 import { cn } from "@/lib/utils";
-import { CloudUpload, Loader2, Minus, Plus, Sparkles } from "lucide-react";
+import { CloudUpload, Loader2, Minus, Plus, Sparkles, Globe, Zap, Clock, Circle, Smartphone, Square, Monitor } from "lucide-react";
 
 const MODES = [
   { value: "AUTOMATIC", label: "Automático" },
@@ -314,13 +314,13 @@ export function CreateProjectForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-6">
+    <form onSubmit={onSubmit} className="mx-auto max-w-[880px] space-y-8">
       <div className="flex gap-2">
         <button
           type="button"
           className={cn(
-            "h-9 rounded-lg border px-3 text-[13px] font-medium",
-            sourceTab === "file" ? "border-primary/50 bg-primary/15 text-white" : "text-muted-foreground",
+            "h-10 rounded-xl border px-4 text-[13px] font-medium",
+            sourceTab === "file" ? "border-magenta/50 bg-magenta/10 text-white" : "text-text-secondary",
           )}
           onClick={() => setSourceTab("file")}
         >
@@ -328,7 +328,7 @@ export function CreateProjectForm({
         </button>
         <button
           type="button"
-          className="h-9 rounded-lg border px-3 text-[13px] font-medium text-muted-foreground"
+          className="h-10 rounded-xl border px-4 text-[13px] font-medium text-text-secondary"
           disabled
           aria-disabled="true"
           title="Em breve"
@@ -339,8 +339,8 @@ export function CreateProjectForm({
 
       <label
         className={cn(
-          "relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-3xl bg-[#07070a] px-6 text-center gradient-border",
-          dragOver && "bg-primary/5",
+          "relative flex min-h-[380px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-3xl bg-[#07070a] px-8 py-10 text-center gradient-border",
+          dragOver && "bg-magenta/5",
         )}
         onDragOver={(event) => {
           event.preventDefault();
@@ -358,26 +358,28 @@ export function CreateProjectForm({
           readFile(file);
         }}
       >
-        <span className="pointer-events-none absolute inset-y-8 left-0 w-24 opacity-40" aria-hidden>
-          <svg viewBox="0 0 120 220" className="h-full w-full">
-            <circle cx="20" cy="40" r="48" fill="url(#g1)" />
+        <span className="pointer-events-none absolute inset-y-0 left-0 w-36 opacity-70" aria-hidden>
+          <svg viewBox="0 0 140 340" className="h-full w-full">
             <defs>
-              <radialGradient id="g1">
-                <stop offset="0%" stopColor="#E92ACB" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="#E92ACB" stopOpacity="0" />
-              </radialGradient>
+              <linearGradient id="waveL" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#E92ACB" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#8B3DFF" stopOpacity="0" />
+              </linearGradient>
             </defs>
+            <path d="M0 40 C40 80 20 140 48 180 C70 214 10 250 0 300 Z" fill="url(#waveL)" />
+            <circle cx="18" cy="90" r="58" fill="#E92ACB" fillOpacity="0.16" />
           </svg>
         </span>
-        <span className="pointer-events-none absolute inset-y-8 right-0 w-24 opacity-40" aria-hidden>
-          <svg viewBox="0 0 120 220" className="h-full w-full">
-            <circle cx="100" cy="180" r="54" fill="url(#g2)" />
+        <span className="pointer-events-none absolute inset-y-0 right-0 w-36 opacity-70" aria-hidden>
+          <svg viewBox="0 0 140 340" className="h-full w-full">
             <defs>
-              <radialGradient id="g2">
-                <stop offset="0%" stopColor="#2563EB" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
-              </radialGradient>
+              <linearGradient id="waveR" x1="1" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#2563EB" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#8B3DFF" stopOpacity="0" />
+              </linearGradient>
             </defs>
+            <path d="M140 50 C100 90 122 150 92 190 C70 224 130 260 140 310 Z" fill="url(#waveR)" />
+            <circle cx="122" cy="240" r="62" fill="#2563EB" fillOpacity="0.16" />
           </svg>
         </span>
         {fileMeta ? (
@@ -390,12 +392,12 @@ export function CreateProjectForm({
             )}
             <div className="min-w-0">
               <p className="truncate text-[14px] font-medium">{fileMeta.name}</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">
+              <p className="mt-1 text-[13px] text-text-secondary">
                 {formatBytes(fileMeta.size)}
                 {fileMeta.durationMs ? ` · ${formatDuration(fileMeta.durationMs)}` : ""}
                 {fileMeta.width && fileMeta.height ? ` · ${fileMeta.width}×${fileMeta.height}` : ""}
               </p>
-              {statusLabel ? <p className="mt-2 text-[12px] text-primary">{statusLabel}</p> : <p className="mt-2 text-[12px] text-muted-foreground">Clique para trocar o arquivo</p>}
+              {statusLabel ? <p className="mt-2 text-[12px] text-primary">{statusLabel}</p> : <p className="mt-2 text-[12px] text-text-secondary">Clique para trocar o arquivo</p>}
               {phase === "uploading" ? (
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
                   <div className="h-full gradient-brand transition-[width]" style={{ width: `${progress}%` }} />
@@ -405,13 +407,13 @@ export function CreateProjectForm({
           </div>
         ) : (
           <div className="relative z-10">
-            <CloudUpload className="mx-auto size-10 text-primary" aria-hidden />
-            <p className="mt-3 text-[16px] font-medium">Arraste seu vídeo aqui</p>
-            <p className="mt-1 text-[13px] text-muted-foreground">ou</p>
-            <span className="mt-3 inline-flex h-9 items-center rounded-lg gradient-brand px-3 text-[13px] font-medium text-white">
+            <CloudUpload className="mx-auto size-12 text-purple" aria-hidden />
+            <p className="mt-4 text-[18px] font-medium text-white">Arraste seu vídeo aqui</p>
+            <p className="mt-1 text-[14px] text-text-secondary">ou</p>
+            <span className="mt-4 inline-flex h-11 items-center rounded-xl gradient-brand px-5 text-[14px] font-semibold text-white">
               Selecionar vídeo
             </span>
-            <p className="mt-3 text-[12px] text-muted-foreground">MP4, MOV ou WEBM — envio direto ao storage</p>
+            <p className="mt-4 text-[12px] text-text-secondary">MP4, MOV ou WEBM — envio direto ao storage</p>
           </div>
         )}
         <input
@@ -425,116 +427,141 @@ export function CreateProjectForm({
         <input type="hidden" name="sourceKind" value="UPLOAD" />
       </label>
 
-      <div className="rounded-2xl border bg-card p-4">
-        <p className="text-[14px] font-semibold">Configurações de criação</p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className={cn("cursor-pointer rounded-xl border p-3", !advanced && "border-primary/60 bg-primary/10")}>
+      <div className="rounded-3xl p-7 gradient-border-config sm:p-8">
+        <p className="text-[17px] font-semibold text-white">Configurações de criação</p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <label className={cn("cursor-pointer rounded-2xl border p-5", !advanced && "border-magenta bg-magenta/10 glow-primary")}>
             <input type="radio" name="experience" className="sr-only" defaultChecked onChange={() => setAdvanced(false)} />
-            <span className="flex items-center justify-between gap-2">
-              <span className="text-[14px] font-medium">Modo automático</span>
-              <span className="rounded-md gradient-brand px-1.5 py-0.5 text-[10px] font-semibold text-white">RECOMENDADO</span>
+            <span className="flex items-start justify-between gap-2">
+              <span className="flex items-center gap-2.5">
+                <span className={cn("mt-0.5 flex size-4 items-center justify-center rounded-full border-2", !advanced ? "border-magenta" : "border-border")}>
+                  {!advanced ? <span className="size-2 rounded-full bg-magenta" /> : null}
+                </span>
+                <span className="text-[15px] font-medium text-white">🤖 Modo automático</span>
+              </span>
+              <span className="rounded-md border border-gold/40 bg-gold/15 px-1.5 py-0.5 text-[10px] font-semibold text-gold">★ RECOMENDADO</span>
             </span>
-            <span className="mt-1 block text-[12px] text-muted-foreground">
+            <span className="mt-2 block pl-7 text-[13px] leading-5 text-text-secondary">
               A IA escolhe automaticamente os melhores momentos e configura os clips.
             </span>
           </label>
-          <label className={cn("cursor-pointer rounded-xl border p-3", advanced && "border-primary/60 bg-primary/10")}>
+          <label className={cn("cursor-pointer rounded-2xl border border-border bg-surface p-5", advanced && "border-magenta bg-magenta/10 glow-primary")}>
             <input type="radio" name="experience" className="sr-only" onChange={() => setAdvanced(true)} />
-            <span className="text-[14px] font-medium">Personalizar</span>
-            <span className="mt-1 block text-[12px] text-muted-foreground">Ajuste todas as preferências manualmente.</span>
+            <span className="flex items-center gap-2.5">
+              <span className={cn("flex size-4 items-center justify-center rounded-full border-2", advanced ? "border-magenta" : "border-border")}>
+                {advanced ? <span className="size-2 rounded-full bg-magenta" /> : null}
+              </span>
+              <span className="text-[15px] font-medium text-white">Personalizar</span>
+            </span>
+            <span className="mt-2 block pl-7 text-[13px] leading-5 text-text-secondary">Ajuste todas as preferências manualmente.</span>
           </label>
         </div>
 
         {!advanced ? (
           <>
-            <div className="mt-4 space-y-4">
+            <div className="mt-6 space-y-6">
               <div>
-                <p className="text-[13px] font-medium">Quantidade de clips (máx. {maxClipsPerProject})</p>
-                <div className="mt-2 flex items-center justify-center gap-4">
-                  <button
-                    type="button"
-                    className="flex size-9 items-center justify-center rounded-lg border"
-                    aria-label="Diminuir quantidade"
-                    onClick={() => setClipCount((value) => Math.max(1, value - 1))}
-                  >
-                    <Minus className="size-4" />
-                  </button>
-                  <span className="w-8 text-center text-[18px] font-semibold">{clipCount}</span>
-                  <button
-                    type="button"
-                    className="flex size-9 items-center justify-center rounded-lg border"
-                    aria-label="Aumentar quantidade"
-                    onClick={() => setClipCount((value) => Math.min(maxClipsPerProject, value + 1))}
-                  >
-                    <Plus className="size-4" />
-                  </button>
+                <p className="text-[13px] font-medium text-white">Quantidade de clips (máx. {maxClipsPerProject})</p>
+                <div className="mt-3 flex items-center justify-center">
+                  <div className="inline-flex items-center gap-1 rounded-2xl border border-border bg-surface p-1.5">
+                    <button
+                      type="button"
+                      className="flex size-11 items-center justify-center rounded-xl text-white hover:bg-surface-hover"
+                      aria-label="Diminuir quantidade"
+                      onClick={() => setClipCount((value) => Math.max(1, value - 1))}
+                    >
+                      <Minus className="size-4" />
+                    </button>
+                    <span className="w-12 text-center text-[24px] font-semibold text-white">{clipCount}</span>
+                    <button
+                      type="button"
+                      className="flex size-11 items-center justify-center rounded-xl text-white hover:bg-surface-hover"
+                      aria-label="Aumentar quantidade"
+                      onClick={() => setClipCount((value) => Math.min(maxClipsPerProject, value + 1))}
+                    >
+                      <Plus className="size-4" />
+                    </button>
+                  </div>
                 </div>
                 <input type="hidden" name="clipCount" value={clipCount} />
               </div>
-              <div className="space-y-1.5">
-                <label htmlFor="languageSimple" className="text-[13px] font-medium">
+              <div className="space-y-2">
+                <label htmlFor="languageSimple" className="text-[13px] font-medium text-white">
                   Idioma
                 </label>
-                <select id="languageSimple" name="language" className="h-10 w-full rounded-md border bg-transparent px-2 text-[13px]" defaultValue="auto">
-                  <option value="auto">Detectar automaticamente</option>
-                  <option value="pt-BR">Português (Brasil)</option>
-                  <option value="en">English</option>
-                  <option value="es">Español</option>
-                </select>
+                <div className="relative">
+                  <Globe className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-blue" />
+                  <select id="languageSimple" name="language" className="studio-select pl-10" defaultValue="auto">
+                    <option value="auto">Detectar automaticamente</option>
+                    <option value="pt-BR">Português (Brasil)</option>
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                  </select>
+                </div>
               </div>
               <div>
-                <p className="text-[13px] font-medium">Duração</p>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-[13px]">
-                  {[
-                    ["15-30", "Curto", "15–30s"],
-                    ["30-60", "Médio", "30–60s"],
-                    ["60-90", "Longo", "60–90s"],
-                  ].map(([value, label, hint]) => (
+                <p className="text-[13px] font-medium text-white">Duração</p>
+                <div className="mt-3 grid grid-cols-3 gap-3 text-[13px]">
+                  {(
+                    [
+                      { value: "15-30", label: "Curto", hint: "15–30s", Icon: Zap },
+                      { value: "30-60", label: "Médio", hint: "30–60s", Icon: Clock },
+                      { value: "60-90", label: "Longo", hint: "60–90s", Icon: Circle },
+                    ] as const
+                  ).map((option) => (
                     <button
-                      key={value}
+                      key={option.value}
                       type="button"
                       className={cn(
-                        "rounded-xl border px-2 py-2 text-left",
-                        duration === value && "border-primary/70 bg-primary/15",
+                        "rounded-2xl border px-3 py-4 text-left",
+                        duration === option.value ? "border-magenta bg-purple/20 glow-primary" : "border-border bg-surface",
                       )}
-                      aria-pressed={duration === value}
-                      onClick={() => setDuration(value)}
+                      aria-pressed={duration === option.value}
+                      onClick={() => setDuration(option.value)}
                     >
-                      <span className="block font-medium">{label}</span>
-                      <span className="text-[11px] text-muted-foreground">{hint}</span>
+                      <span className="flex items-center gap-1.5 font-medium text-white">
+                        <option.Icon className={cn("size-3.5", duration === option.value ? "text-magenta" : "text-text-secondary")} />
+                        {option.label}
+                      </span>
+                      <span className="mt-1 block text-[12px] text-text-secondary">{option.hint}</span>
                     </button>
                   ))}
                 </div>
                 <input type="hidden" name="clipDuration" value={duration} />
               </div>
               <div>
-                <p className="text-[13px] font-medium">Formato</p>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-[13px]">
-                  {[
-                    ["9:16", "Vertical 9:16"],
-                    ["1:1", "Quadrado 1:1"],
-                    ["16:9", "Horizontal 16:9"],
-                  ].map(([value, label]) => (
+                <p className="text-[13px] font-medium text-white">Formato</p>
+                <div className="mt-3 grid grid-cols-3 gap-3 text-[13px]">
+                  {(
+                    [
+                      { value: "9:16", label: "Vertical 9:16", Icon: Smartphone },
+                      { value: "1:1", label: "Quadrado 1:1", Icon: Square },
+                      { value: "16:9", label: "Horizontal 16:9", Icon: Monitor },
+                    ] as const
+                  ).map((option) => (
                     <button
-                      key={value}
+                      key={option.value}
                       type="button"
                       className={cn(
-                        "rounded-xl border px-2 py-2",
-                        aspect === value && "border-primary/70 bg-primary/15",
+                        "rounded-2xl border px-3 py-4",
+                        aspect === option.value ? "border-magenta bg-purple/20 glow-primary" : "border-border bg-surface",
                       )}
-                      aria-pressed={aspect === value}
-                      onClick={() => setAspect(value)}
+                      aria-pressed={aspect === option.value}
+                      onClick={() => setAspect(option.value)}
                     >
-                      {label}
+                      <span className="flex flex-col items-center gap-1.5 text-center font-medium text-white">
+                        <option.Icon className={cn("size-4", aspect === option.value ? "text-magenta" : "text-text-secondary")} />
+                        {option.label}
+                      </span>
                     </button>
                   ))}
                 </div>
                 <input type="hidden" name="outputAspect" value={aspect} />
               </div>
-              <label className="flex items-center gap-2 text-[13px]">
-                <input type="checkbox" name="autoCaptions" defaultChecked className="size-3.5 accent-primary" />
+              <label className="flex items-center gap-2.5 text-[14px] text-white">
+                <input type="checkbox" name="autoCaptions" defaultChecked className="size-4 accent-[#e92acb]" />
                 Legendas automáticas
-                <span className="rounded border px-1 text-[10px] font-semibold">CC</span>
+                <span className="rounded border border-gold/50 px-1.5 py-0.5 text-[10px] font-semibold text-gold">CC</span>
               </label>
             </div>
             <input type="hidden" name="mode" value="AUTOMATIC" />
@@ -547,14 +574,14 @@ export function CreateProjectForm({
             <input type="hidden" name="generateHashtags" value="on" />
           </>
         ) : (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
               <label htmlFor="name" className="text-[13px] font-medium">Nome do projeto</label>
               <Input id="name" name="name" placeholder="Opcional — usamos o nome do arquivo" />
             </div>
             <div className="space-y-1.5">
               <label htmlFor="language" className="text-[13px] font-medium">Idioma</label>
-              <select id="language" name="language" className="h-10 w-full rounded-md border bg-transparent px-2 text-[13px]" defaultValue="auto">
+              <select id="language" name="language" className="studio-select" defaultValue="auto">
                 <option value="auto">Detectar automaticamente</option>
                 <option value="pt-BR">Português (Brasil)</option>
                 <option value="en">English</option>
@@ -589,7 +616,7 @@ export function CreateProjectForm({
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <label htmlFor="mode" className="text-[13px] font-medium">Estilo</label>
-              <select id="mode" name="mode" className="h-10 w-full rounded-md border bg-transparent px-2 text-[13px]" defaultValue="AUTOMATIC">
+              <select id="mode" name="mode" className="studio-select" defaultValue="AUTOMATIC">
                 {MODES.map((mode) => (
                   <option key={mode.value} value={mode.value}>
                     {mode.label}
@@ -609,7 +636,7 @@ export function CreateProjectForm({
                 ["generateHashtags", "Hashtags"],
               ].map(([name, label]) => (
                 <label key={name} className="flex items-center gap-2">
-                  <input type="checkbox" name={name} defaultChecked className="size-3.5 accent-primary" />
+                  <input type="checkbox" name={name} defaultChecked className="size-3.5 accent-[#e92acb]" />
                   {label}
                 </label>
               ))}
@@ -618,8 +645,8 @@ export function CreateProjectForm({
         )}
       </div>
 
-      <label className="flex items-start gap-2 text-[13px]">
-        <input type="checkbox" name="authorized" required className="mt-0.5 size-3.5 accent-primary" />
+      <label className="flex items-start gap-2.5 text-[14px] text-white">
+        <input type="checkbox" name="authorized" required className="mt-0.5 size-4 accent-[#e92acb]" />
         Confirmo que tenho autorização para utilizar este conteúdo.
       </label>
       {error ? (
@@ -629,7 +656,7 @@ export function CreateProjectForm({
       ) : null}
       <button
         type="submit"
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg gradient-brand text-[14px] font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+        className="inline-flex h-16 w-full items-center justify-center gap-2 rounded-2xl gradient-brand text-[16px] font-semibold text-white shadow-[0_0_28px_rgba(139,61,255,0.28)] glow-primary transition hover:opacity-90 disabled:opacity-60"
         disabled={busy}
       >
         {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
@@ -639,10 +666,10 @@ export function CreateProjectForm({
             ? "Preparando seu vídeo..."
             : statusLabel && busy
               ? statusLabel
-              : "Gerar clips"}
+              : "✨ Gerar clips"}
       </button>
       {phase === "uploading" || phase === "preparing" ? (
-        <button type="button" className="w-full text-[12px] text-muted-foreground underline-offset-2 hover:underline" onClick={() => void cancelUpload()}>
+        <button type="button" className="w-full text-[12px] text-text-secondary underline-offset-2 hover:underline" onClick={() => void cancelUpload()}>
           Cancelar envio
         </button>
       ) : null}

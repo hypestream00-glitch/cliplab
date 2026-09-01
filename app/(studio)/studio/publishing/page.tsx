@@ -152,7 +152,7 @@ export default async function PublishingPage({ searchParams }: PageSearchProps) 
       )}
 
       {selected ? (
-        <article className="mb-4 rounded-xl border bg-card p-4 text-[13px]">
+        <article className="mb-5 rounded-2xl border border-border bg-card p-5 text-[13px]">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="font-medium">{selected.clip?.title ?? selected.caption ?? "Publicação"}</p>

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -8,15 +9,15 @@ export function PageHeader({
   description,
   actions,
 }: {
-  title: string;
-  description?: string;
-  actions?: React.ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
 }) {
   return (
-    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 className="text-[18px] leading-6 font-semibold tracking-tight">{title}</h1>
-        {description ? <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p> : null}
+    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0">
+        <h1 className="text-[26px] leading-8 font-semibold tracking-tight text-white">{title}</h1>
+        {description ? <p className="mt-1.5 max-w-2xl text-[14px] leading-6 text-text-secondary">{description}</p> : null}
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </div>
@@ -35,9 +36,9 @@ export function EmptyState({
   actionHref?: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed bg-card/40 px-6 py-16 text-center">
-      <p className="text-[15px] font-medium tracking-tight">{title}</p>
-      <p className="mt-1.5 max-w-sm text-[13px] leading-5 text-muted-foreground">{description}</p>
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 px-8 py-20 text-center">
+      <p className="text-[16px] font-medium tracking-tight text-white">{title}</p>
+      <p className="mt-2 max-w-sm text-[14px] leading-6 text-text-secondary">{description}</p>
       {actionLabel && actionHref ? (
         <Button asChild className="mt-4">
           <Link href={actionHref}>{actionLabel}</Link>
@@ -56,16 +57,16 @@ export function StatCard({
   label: string;
   value: string;
   hint?: string;
-  badge?: React.ReactNode;
+  badge?: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border bg-card px-4 py-3.5">
+    <div className="rounded-2xl border border-border bg-card px-5 py-5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[12px] text-muted-foreground">{label}</p>
+        <p className="text-[13px] text-text-secondary">{label}</p>
         {badge}
       </div>
-      <p className="mt-1 text-[20px] leading-6 font-semibold tracking-tight gradient-brand-text">{value}</p>
-      {hint ? <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p> : null}
+      <p className="mt-2 text-[24px] leading-7 font-semibold tracking-tight gradient-brand-text">{value}</p>
+      {hint ? <p className="mt-1.5 text-[12px] text-text-secondary">{hint}</p> : null}
     </div>
   );
 }

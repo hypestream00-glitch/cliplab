@@ -1,6 +1,5 @@
 "use client";
 
-import { Gift } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,10 +27,10 @@ export function ReferralButton({ url, invited, converted, rewardDays }: Referral
         <Button
           type="button"
           variant="outline"
-          className="h-8 border-yellow-500/40 bg-black px-2.5 text-[12px] text-yellow-300 hover:bg-yellow-500/10 hover:text-yellow-200"
+          className="h-9 gap-1.5 rounded-xl border-gold/55 bg-black px-3.5 text-[13px] font-semibold text-yellow-300 glow-promo hover:bg-gold/10 hover:text-yellow-200"
           aria-label="Indique e ganhe"
         >
-          <Gift className="size-3.5" />
+          <span aria-hidden>🎁</span>
           <span className="hidden sm:inline">Indique e ganhe</span>
         </Button>
       </DialogTrigger>

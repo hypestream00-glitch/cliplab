@@ -56,7 +56,7 @@ export default async function StudioHomePage() {
   const title = firstName ? `Olá, ${firstName}` : "Olá";
 
   return (
-    <div className="mx-auto max-w-[1280px]">
+    <div className="mx-auto max-w-[1440px]">
       <PageHeader
         title={title}
         description="Envie um vídeo, receba clips e publique nas suas redes."
@@ -78,7 +78,7 @@ export default async function StudioHomePage() {
         />
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Projetos" value={formatNumber(projectCount)} />
         <StatCard label="Clips gerados" value={formatNumber(clipCount)} />
         <StatCard label="Clips publicados" value={formatNumber(publishedCount)} />
@@ -89,18 +89,18 @@ export default async function StudioHomePage() {
         />
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <article className="rounded-2xl border bg-card p-4 hover:border-primary/40">
-          <p className="text-[12px] text-muted-foreground">Plano atual</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <p className="text-[16px] font-semibold">{usage.limits.name}</p>
+      <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <article className="rounded-2xl border border-border bg-card p-5 hover:border-magenta/30">
+          <p className="text-[12px] text-text-secondary">Plano atual</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <p className="text-[16px] font-semibold text-white">{usage.limits.name}</p>
             {usage.activeGrant ? (
               <span className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-1.5 py-0.5 text-[10px] text-yellow-300">
                 🎁 Benefício ativo
               </span>
             ) : null}
           </div>
-          <p className="mt-1 text-[13px] text-muted-foreground">
+          <p className="mt-1.5 text-[13px] text-text-secondary">
             {formatMinutesUsed(usage.usedSeconds, usage.limits.monthlyMinutes)}
           </p>
           {usage.activeGrant ? (
@@ -110,40 +110,40 @@ export default async function StudioHomePage() {
                 : `${usage.activeGrant.daysLeft} dia${usage.activeGrant.daysLeft === 1 ? "" : "s"} grátis restantes`}
             </p>
           ) : null}
-          <Link href="/studio/settings/billing" className="mt-2 inline-block text-[12px] text-primary hover:underline">
+          <Link href="/studio/settings/billing" className="mt-3 inline-block text-[13px] font-medium text-blue hover:underline">
             Gerenciar plano
           </Link>
         </article>
-        <article className="rounded-2xl border bg-card p-4">
-          <p className="text-[12px] text-muted-foreground">Contas sociais</p>
-          <p className="mt-1 text-[16px] font-semibold">{formatNumber(socialCount)}</p>
-          <p className="mt-1 text-[13px] text-muted-foreground">
+        <article className="rounded-2xl border border-border bg-card p-5">
+          <p className="text-[12px] text-text-secondary">Contas sociais</p>
+          <p className="mt-1.5 text-[16px] font-semibold text-white">{formatNumber(socialCount)}</p>
+          <p className="mt-1.5 text-[13px] text-text-secondary">
             {socialCount === 0 ? "Conecte sua primeira rede social." : "Contas conectadas neste workspace."}
           </p>
-          <Link href="/studio/accounts" className="mt-2 inline-block text-[12px] text-primary hover:underline">
+          <Link href="/studio/accounts" className="mt-3 inline-block text-[13px] font-medium text-blue hover:underline">
             {socialCount === 0 ? "Conectar rede" : "Ver contas"}
           </Link>
         </article>
-        <article className="rounded-2xl border bg-card p-4">
-          <p className="text-[12px] text-muted-foreground">Ações rápidas</p>
-          <div className="mt-2 flex flex-col gap-1 text-[13px]">
-            <Link href="/studio/create" className="text-primary hover:underline">
+        <article className="rounded-2xl border border-border bg-card p-5">
+          <p className="text-[12px] text-text-secondary">Ações rápidas</p>
+          <div className="mt-3 flex flex-col gap-2 text-[13px]">
+            <Link href="/studio/create" className="font-medium text-magenta hover:underline">
               Novo projeto
             </Link>
-            <Link href="/studio/accounts" className="text-muted-foreground hover:text-foreground">
+            <Link href="/studio/accounts" className="text-text-secondary hover:text-white">
               Conectar rede
             </Link>
-            <Link href="/studio/calendar" className="text-muted-foreground hover:text-foreground">
+            <Link href="/studio/calendar" className="text-text-secondary hover:text-white">
               Ver calendário
             </Link>
           </div>
         </article>
       </div>
 
-      <section className="mt-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold tracking-tight">Projetos recentes</h2>
-          <Link href="/studio/projects" className="text-[12px] text-muted-foreground hover:text-foreground">
+      <section className="mt-10">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-[16px] font-semibold tracking-tight text-white">Projetos recentes</h2>
+          <Link href="/studio/projects" className="text-[13px] text-text-secondary hover:text-white">
             Ver todos
           </Link>
         </div>
@@ -155,11 +155,11 @@ export default async function StudioHomePage() {
             actionHref="/studio/create"
           />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {projects.map((project) => {
               const thumb = mediaUrl(project.sourceVideo?.thumbnailKey);
               return (
-                <article key={project.id} className="flex gap-3 rounded-2xl border bg-card p-3 hover:border-primary/40">
+                <article key={project.id} className="flex gap-4 rounded-2xl border border-border bg-card p-4 hover:border-magenta/30">
                   {thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={thumb} alt="" className="size-16 shrink-0 rounded-lg object-cover" />
@@ -195,10 +195,10 @@ export default async function StudioHomePage() {
         )}
       </section>
 
-      <section className="mt-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold tracking-tight">Clips recentes</h2>
-          <Link href="/studio/clips" className="text-[12px] text-muted-foreground hover:text-foreground">
+      <section className="mt-10">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-[16px] font-semibold tracking-tight text-white">Clips recentes</h2>
+          <Link href="/studio/clips" className="text-[13px] text-text-secondary hover:text-white">
             Ver todos
           </Link>
         </div>
@@ -210,7 +210,7 @@ export default async function StudioHomePage() {
             actionHref="/studio/create"
           />
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {clips.map((clip) => (
               <ClipCard
                 key={clip.id}
@@ -229,22 +229,22 @@ export default async function StudioHomePage() {
         )}
       </section>
 
-      <section className="mt-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold tracking-tight">Próximas publicações</h2>
-          <Link href="/studio/calendar" className="text-[12px] text-muted-foreground hover:text-foreground">
+      <section className="mt-10">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-[16px] font-semibold tracking-tight text-white">Próximas publicações</h2>
+          <Link href="/studio/calendar" className="text-[13px] text-text-secondary hover:text-white">
             Calendário
           </Link>
         </div>
         {publications.length === 0 ? (
           <EmptyState title="Nenhuma publicação agendada." description="Quando você agendar um clip, ele aparece aqui." />
         ) : (
-          <div className="divide-y rounded-2xl border bg-card">
+          <div className="divide-y divide-border rounded-2xl border border-border bg-card">
             {publications.map((item) => (
               <Link
                 key={item.id}
                 href={`/studio/publishing?id=${item.id}`}
-                className="flex items-center justify-between gap-3 px-4 py-3 text-[13px] hover:bg-muted/20"
+                className="flex items-center justify-between gap-3 px-5 py-4 text-[14px] hover:bg-surface-hover"
               >
                 <span className="truncate">{item.clip?.title ?? item.caption ?? "Sem legenda"}</span>
                 <span className="shrink-0 text-muted-foreground">

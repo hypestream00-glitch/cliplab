@@ -62,7 +62,7 @@ export function ClipCard({
 
   return (
     <>
-      <article className="group relative overflow-hidden rounded-2xl border bg-card">
+      <article className="group relative overflow-hidden rounded-2xl border border-border bg-card">
         {selectable ? (
           <label className="absolute top-2 left-2 z-10 rounded bg-black/70 px-1.5 py-0.5 text-[11px] text-white">
             <input type="checkbox" name="clipIds" value={id} className="mr-1 accent-primary" />

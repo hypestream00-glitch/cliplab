@@ -74,7 +74,7 @@ export default async function CalendarPage({ searchParams }: PageSearchProps) {
           </div>
         }
       />
-      <div className="mb-4 grid grid-cols-7 gap-px overflow-x-auto rounded-xl border bg-border">
+      <div className="mb-6 grid grid-cols-7 gap-px overflow-x-auto rounded-2xl border border-border bg-border">
         {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((label) => (
           <div key={label} className="bg-muted/40 px-2 py-1.5 text-[11px] font-medium text-muted-foreground">
             {label}
@@ -85,7 +85,7 @@ export default async function CalendarPage({ searchParams }: PageSearchProps) {
           return (
             <div
               key={day.toISOString()}
-              className={`min-h-24 min-w-[88px] bg-card p-1.5 ${isSameMonth(day, monthStart) ? "" : "opacity-40"} ${isSameDay(day, new Date()) ? "ring-1 ring-primary/40" : ""}`}
+              className={`min-h-28 min-w-[88px] bg-card p-2 ${isSameMonth(day, monthStart) ? "" : "opacity-40"} ${isSameDay(day, new Date()) ? "ring-1 ring-magenta/50" : ""}`}
             >
               <p className="text-[11px] text-muted-foreground">{format(day, "d")}</p>
               <div className="mt-1 space-y-1">
@@ -93,7 +93,7 @@ export default async function CalendarPage({ searchParams }: PageSearchProps) {
                   <Link
                     key={item.id}
                     href={`/studio/publishing?id=${item.id}`}
-                    className="block truncate rounded bg-primary/15 px-1 py-0.5 text-[11px] text-primary-foreground/90"
+                    className="block truncate rounded-md bg-magenta/15 px-1.5 py-1 text-[11px] text-white"
                   >
                     {item.clip?.title ?? item.caption ?? "Post"}
                   </Link>

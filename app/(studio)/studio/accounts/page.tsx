@@ -126,7 +126,7 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
             const platformAccounts = accounts.filter((account) => account.platform === platform);
             const capabilities = PLATFORM_CAPABILITIES[platform];
             return (
-              <article key={platform} id={platform.toLowerCase()} className="rounded-lg border bg-card p-3.5">
+              <article key={platform} id={platform.toLowerCase()} className="rounded-2xl border border-border bg-card p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[13px] font-semibold">{platform}</p>
@@ -255,7 +255,7 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
                           ? "youtube"
                           : undefined
               }
-              className="rounded-lg border bg-card p-3.5"
+              className="rounded-2xl border border-border bg-card p-5"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>

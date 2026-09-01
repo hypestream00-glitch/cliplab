@@ -72,10 +72,10 @@ export default async function BillingPage({ searchParams }: PageSearchProps) {
         <StatCard label="Resolução" value={plan.maxResolution} />
         <StatCard label="Clips por projeto" value={`${plan.maxClipsPerProject}`} />
       </div>
-      <div className="mt-4 rounded-2xl border bg-card p-4">
-        <p className="text-[13px] font-medium">Minutos utilizados</p>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-primary" style={{ width: `${usedMinutesPct}%` }} />
+      <div className="mt-5 rounded-2xl border border-border bg-card p-5">
+        <p className="text-[13px] font-medium text-white">Minutos utilizados</p>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full gradient-primary" style={{ width: `${usedMinutesPct}%` }} />
         </div>
         <p className="mt-2 text-[12px] text-muted-foreground">
           {formatNumber(Math.round(usage.usedSeconds))}s de {formatNumber(plan.monthlyMinutes * 60)}s neste período
@@ -93,7 +93,7 @@ export default async function BillingPage({ searchParams }: PageSearchProps) {
           const item = PLAN_LIMITS[code];
           const current = currentCode === code;
           return (
-            <form key={code} action={changePlanAction} className={`rounded-xl border bg-card p-3 ${current ? "ring-1 ring-primary" : ""}`}>
+            <form key={code} action={changePlanAction} className={`rounded-2xl border border-border bg-card p-5 ${current ? "border-magenta/50 bg-magenta/5 glow-primary" : ""}`}>
               <input type="hidden" name="plan" value={code} />
               <p className="text-[13px] font-semibold">{item.name}</p>
               <p className="mt-1 text-[12px] text-muted-foreground">{planPriceLabel(code)}</p>

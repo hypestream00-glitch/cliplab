@@ -70,25 +70,25 @@ export function Sidebar({
       className={cn(
         "h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
         forceVisible ? "flex w-full" : "hidden md:flex",
-        collapsed ? "w-[72px]" : "w-[248px]",
+        collapsed ? "w-[80px]" : "w-[280px]",
       )}
     >
-      <div className={cn("flex h-14 items-center border-b border-sidebar-border px-3", collapsed && "justify-center px-0")}>
-        <Link href="/studio" className="flex items-center gap-2.5" onClick={onNavigate}>
-          <span className="flex size-8 items-center justify-center rounded-xl gradient-brand text-[13px] font-bold text-white">
+      <div className={cn("flex h-16 items-center border-b border-sidebar-border px-4", collapsed && "justify-center px-0")}>
+        <Link href="/studio" className="flex items-center gap-3" onClick={onNavigate}>
+          <span className="flex size-9 items-center justify-center rounded-lg gradient-brand text-[15px] font-bold text-white shadow-[0_0_18px_rgba(233,42,203,0.35)]">
             C
           </span>
-          {!collapsed && <span className="text-[14px] font-semibold tracking-tight">{brand.name}</span>}
+          {!collapsed && <span className="text-[16px] font-semibold tracking-tight text-white">{brand.name}</span>}
         </Link>
       </div>
 
-      <div className={cn("px-2 pt-3", collapsed && "px-1.5")}>
+      <div className={cn("px-3 pt-4", collapsed && "px-2")}>
         <Link
           href="/studio/create"
           onClick={onNavigate}
           aria-label="Novo projeto"
           className={cn(
-            "inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg gradient-brand text-[13px] font-semibold text-white transition hover:opacity-90",
+            "inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-xl gradient-primary text-[14px] font-semibold text-white transition hover:opacity-90 glow-primary",
             collapsed && "px-0",
           )}
         >
@@ -97,9 +97,9 @@ export function Sidebar({
         </Link>
       </div>
 
-      <nav className="mt-2 flex-1 overflow-y-auto px-2 pb-3" aria-label="Navegação principal">
+      <nav className="mt-3 flex-1 overflow-y-auto px-3 pb-4" aria-label="Navegação principal">
         {studioNavGroups.map((group, index) => (
-          <div key={group.id} className={cn(index > 0 && "mt-3 border-t border-sidebar-border pt-3")}>
+          <div key={group.id} className={cn(index > 0 && "mt-4 border-t border-sidebar-border pt-4")}>
             {group.items.map((item) => {
               const active = isActive(pathname, item.href, allHrefs);
               const Icon = item.icon;
@@ -108,14 +108,14 @@ export function Sidebar({
                   href={item.href}
                   onClick={onNavigate}
                   className={cn(
-                    "mb-0.5 flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors",
+                    "mb-1 flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] font-medium transition-colors",
                     collapsed && "justify-center px-0",
                     active
-                      ? "bg-sidebar-accent text-white glow-nav"
-                      : "text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+                      ? "border border-magenta/50 bg-magenta/10 text-white glow-primary"
+                      : "border border-transparent text-text-secondary hover:bg-surface-hover hover:text-white",
                   )}
                 >
-                  <Icon className={cn("size-4 shrink-0", active && "text-white")} />
+                  <Icon className={cn("size-4 shrink-0", active ? "text-magenta" : "text-text-secondary")} />
                   {!collapsed && <span className="truncate">{item.label}</span>}
                 </Link>
               );
@@ -131,7 +131,7 @@ export function Sidebar({
         ))}
       </nav>
 
-      <div className="space-y-2 border-t border-sidebar-border p-2">
+      <div className="space-y-3 border-t border-sidebar-border p-3">
         <CouponCard collapsed={collapsed} />
         <WorkspaceSwitcher collapsed={collapsed} workspaces={workspaces} currentWorkspaceId={currentWorkspaceId} />
         <CreditsWidget
@@ -142,18 +142,20 @@ export function Sidebar({
           usagePercent={usagePercent}
           grantLabel={grantLabel}
         />
-        <div className={cn("flex items-center gap-2 rounded-lg px-2 py-1.5", collapsed && "justify-center px-0")}>
+        <div className={cn("flex items-center gap-3 rounded-xl px-1 py-1.5", collapsed && "justify-center px-0")}>
           {collapsed ? (
             <UserMenu name={user.name} email={user.email} image={user.image} workspaceName={workspaceName} planName={planName} />
           ) : (
             <>
-              <Avatar className="size-8">
-                {user.image ? <AvatarImage src={user.image} alt={user.name ?? ""} /> : null}
-                <AvatarFallback className="text-[10px]">{initials(user.name)}</AvatarFallback>
-              </Avatar>
+              <div className="rounded-full p-[2px] gradient-primary">
+                <Avatar className="size-9 after:hidden">
+                  {user.image ? <AvatarImage src={user.image} alt={user.name ?? ""} /> : null}
+                  <AvatarFallback className="bg-[#12121a] text-[11px] text-white">{initials(user.name)}</AvatarFallback>
+                </Avatar>
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[12px] font-medium">{user.name ?? user.email ?? "Conta"}</p>
-                <p className="truncate text-[11px] text-muted-foreground">{user.email ?? planName}</p>
+                <p className="truncate text-[13px] font-medium text-white">{user.name ?? user.email ?? "Conta"}</p>
+                <p className="truncate text-[12px] text-text-secondary">{user.email ?? planName}</p>
               </div>
               <UserMenu name={user.name} email={user.email} image={user.image} workspaceName={workspaceName} planName={planName} />
             </>

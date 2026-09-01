@@ -47,9 +47,9 @@ export default async function ProjectsPage({ searchParams }: PageSearchProps) {
           </Button>
         }
       />
-      <form className="mb-3 flex flex-wrap gap-2">
+      <form className="mb-5 flex flex-wrap gap-2">
         <DebouncedSearch key={q} placeholder="Buscar projetos" defaultValue={q} />
-        <select name="status" defaultValue={status} className="h-8 rounded-md border bg-transparent px-2 text-[13px]">
+        <select name="status" defaultValue={status} className="h-10 rounded-xl border border-border bg-surface px-3 text-[13px] text-white">
           <option value="">Todos os status</option>
           {["CREATED", "UPLOADING", "QUEUED", "PROCESSING", "TRANSCRIBING", "ANALYZING", "GENERATING", "READY", "FAILED", "CANCELED"].map(
             (item) => (
@@ -59,11 +59,11 @@ export default async function ProjectsPage({ searchParams }: PageSearchProps) {
             ),
           )}
         </select>
-        <select name="filter" defaultValue={archived ? "archived" : ""} className="h-8 rounded-md border bg-transparent px-2 text-[13px]">
+        <select name="filter" defaultValue={archived ? "archived" : ""} className="h-10 rounded-xl border border-border bg-surface px-3 text-[13px] text-white">
           <option value="">Ativos</option>
           <option value="archived">Arquivados</option>
         </select>
-        <button className="h-8 rounded-md border px-3 text-[13px]" type="submit">
+        <button className="h-10 rounded-xl border border-border px-4 text-[13px] font-medium text-white hover:bg-surface-hover" type="submit">
           Filtrar
         </button>
       </form>
@@ -75,22 +75,22 @@ export default async function ProjectsPage({ searchParams }: PageSearchProps) {
           actionHref="/studio/create"
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full min-w-[720px] text-left text-[13px]">
+        <div className="overflow-x-auto rounded-2xl border border-border">
+          <table className="w-full min-w-[720px] text-left text-[14px]">
             <thead className="border-b bg-muted/40 text-[11px] tracking-wide text-muted-foreground uppercase">
               <tr>
-                <th className="px-3 py-2 font-medium">Projeto</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Clipes</th>
-                <th className="px-3 py-2 font-medium">Duração</th>
-                <th className="px-3 py-2 font-medium">Atualizado</th>
-                <th className="px-3 py-2 font-medium">Ações</th>
+                <th className="px-5 py-3.5 font-medium">Projeto</th>
+                <th className="px-4 py-3.5 font-medium">Status</th>
+                <th className="px-4 py-3.5 font-medium">Clipes</th>
+                <th className="px-4 py-3.5 font-medium">Duração</th>
+                <th className="px-4 py-3.5 font-medium">Atualizado</th>
+                <th className="px-4 py-3.5 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
               {projects.map((project) => (
-                <tr key={project.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-3 py-2">
+                <tr key={project.id} className="border-b last:border-0 hover:bg-surface-hover">
+                  <td className="px-5 py-3.5">
                     <Link href={`/studio/projects/${project.id}`} className="flex items-center gap-2 font-medium hover:underline">
                       {project.sourceVideo?.thumbnailKey ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -101,15 +101,15 @@ export default async function ProjectsPage({ searchParams }: PageSearchProps) {
                       {project.name}
                     </Link>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-3.5">
                     <StatusBadge status={project.archivedAt ? "ARCHIVED" : project.status} />
                   </td>
-                  <td className="px-3 py-2">{project._count.clips}</td>
-                  <td className="px-3 py-2 text-muted-foreground">
+                  <td className="px-4 py-3.5">{project._count.clips}</td>
+                  <td className="px-4 py-3.5 text-text-secondary">
                     {project.sourceVideo?.durationMs ? formatDuration(project.sourceVideo.durationMs) : "—"}
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">{fromNow(project.updatedAt)}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-3.5 text-text-secondary">{fromNow(project.updatedAt)}</td>
+                  <td className="px-4 py-3.5">
                     <div className="flex flex-wrap gap-1">
                       {project.archivedAt ? (
                         <form action={restoreProjectAction}>

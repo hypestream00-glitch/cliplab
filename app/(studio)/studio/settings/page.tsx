@@ -8,9 +8,9 @@ export default function SettingsPage() {
   return (
     <div>
       <PageHeader title="Configurações" />
-      <div className="grid gap-2">
+      <div className="grid gap-3">
         {settingsNav.map((item) => (
-          <Link key={item.href} href={item.href} className="rounded-md border px-3 py-2 text-[13px] hover:bg-muted/40">
+          <Link key={item.href} href={item.href} className="rounded-2xl border border-border bg-card px-5 py-4 text-[15px] font-medium text-white hover:bg-surface-hover">
             {item.label}
           </Link>
         ))}

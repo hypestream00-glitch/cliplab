@@ -297,12 +297,16 @@ describe("visual and public copy", () => {
     expect(referral).toContain("Copiar meu link");
     expect(referral).toContain("Ganhe Pro indicando amigos");
     const createPage = readFileSync(path.join(root, "app/(studio)/studio/create/page.tsx"), "utf8");
-    expect(createPage).toContain("Criar clips com IA");
+    expect(createPage).toMatch(/Criar clips com[\s\S]*IA/);
+    expect(createPage).toContain("Envie um vídeo e deixe a IA encontrar os melhores momentos.");
     const createForm = readFileSync(path.join(root, "app/(studio)/studio/create/create-form.tsx"), "utf8");
     expect(createForm).toContain("Em breve");
     expect(createForm).toContain("/api/uploads/init");
     expect(createForm).not.toMatch(/sourceUrl:\s*url/);
     const theme = readFileSync(path.join(root, "app/globals.css"), "utf8");
+    expect(theme).toContain("--surface:");
+    expect(theme).toContain("--magenta:");
+    expect(theme).toContain("--glow-primary:");
     expect(theme).toContain("#050507");
     expect(theme).toContain("#e92acb");
     expect(theme).toContain("#8b3dff");

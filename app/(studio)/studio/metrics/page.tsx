@@ -62,9 +62,9 @@ export default async function MetricsPage({ searchParams }: PageSearchProps) {
           Conteúdo
         </Link>
       </nav>
-      <form className="my-3 flex gap-2 text-[12px]">
+      <form className="my-4 flex gap-2 text-[13px]">
         {["7", "30", "90"].map((value) => (
-          <Link key={value} href={`/studio/analytics?range=${value}`} className="rounded-md border px-2 py-1">
+          <Link key={value} href={`/studio/analytics?range=${value}`} className={`filter-chip ${range === value ? "filter-chip-active" : ""}`}>
             {value} dias
           </Link>
         ))}

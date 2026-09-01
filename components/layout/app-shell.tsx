@@ -85,7 +85,7 @@ export function AppShell({
         user={user}
       />
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-[248px] p-0">
+        <SheetContent side="left" className="w-[280px] p-0">
           <div className="md:hidden">
             <Sidebar
               forceVisible
@@ -112,7 +112,9 @@ export function AppShell({
           onToggleCollapsed={toggleCollapsed}
           onOpenMobile={() => setMobileOpen(true)}
         />
-        <main className="min-h-0 flex-1 overflow-auto overflow-x-hidden px-4 py-5 md:px-6 md:py-6">{children}</main>
+        <main className="min-h-0 flex-1 overflow-auto overflow-x-hidden px-5 py-6 md:px-8 md:py-8 xl:px-10">
+          <div className="mx-auto w-full max-w-[1440px]">{children}</div>
+        </main>
       </div>
     </div>
   );
