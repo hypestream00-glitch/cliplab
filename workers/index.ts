@@ -61,6 +61,12 @@ async function boot() {
 
   emailConfig.logSmtpEnvPresence();
   bootMod.startClipLabWorkers();
+  try {
+    const smtpDiag = await import("@/lib/email/smtp-diagnostic");
+    await smtpDiag.runSmtpConnectivityDiagnostic();
+  } catch {
+    process.stdout.write("SMTP DIAGNOSTIC ERROR: SMTP_CONNECTION_FAILED\n");
+  }
   logger.info("CLIPLAB worker process started");
 }
 

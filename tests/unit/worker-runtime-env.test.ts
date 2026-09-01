@@ -65,6 +65,7 @@ describe("start-worker env preservation", () => {
     expect(index).toContain('bootLog("WORKER STARTED")');
     expect(index).toContain('await import("@/lib/queue/boot")');
     expect(index).toContain("logSmtpEnvPresence");
+    expect(index).toContain("runSmtpConnectivityDiagnostic");
     expect(index).not.toMatch(/import\s+\{[^}]*startClipLabWorkers/);
     expect(index).not.toMatch(/setInterval/);
     expect(boot).toContain("startWorkerScheduler");
