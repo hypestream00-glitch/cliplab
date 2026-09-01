@@ -7,9 +7,10 @@ import { signIn } from "@/lib/auth";
 import { prisma } from "@/lib/db/prisma";
 import { signUpSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "@/lib/validations";
 import { rateLimitGuard } from "@/lib/security/guard";
-import { consumeAuthToken, issueAuthToken, latestTokenIssuedAt } from "@/lib/email/tokens";
-import { canConfirmVerificationResend, sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "@/lib/email/send";
-import { clearVerifyEmailHint, setVerifyEmailHint } from "@/lib/email/hint-cookie";
+import { consumeAuthToken, issueAuthToken, latestTokenIssuedAt, peekAuthToken } from "@/lib/email/tokens";
+import { canConfirmVerificationResend, sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email/send";
+import { clearVerifyEmailHint, getVerifyEmailHint, setVerifyEmailHint } from "@/lib/email/hint-cookie";
+import { confirmEmailFromToken, verificationFailureMessage } from "@/lib/email/verify";
 import { logger } from "@/lib/logger";
 import { completeSignup, SIGNUP_LOG, signupErrorLog } from "@/lib/auth/register";
 import { isNextRedirectError, safeErrorType, withTimeout } from "@/lib/async/timeout";
@@ -156,14 +157,19 @@ export async function resetPasswordAction(_prev: unknown, formData: FormData) {
   redirect("/login?reset=1");
 }
 
-export async function resendVerificationAction() {
+export async function resendVerificationAction(_prev: unknown, formData?: FormData) {
   logger.info("EMAIL RESEND START");
   const limited = await rateLimitGuard("resend-verification", 4, 15 * 60_000);
   if (limited) {
     logger.warn("EMAIL RESEND ERROR: RATE_LIMIT");
     return limited;
   }
-  const email = await (await import("@/lib/email/hint-cookie")).getVerifyEmailHint();
+  const hintToken = typeof formData?.get("token") === "string" ? String(formData.get("token")) : "";
+  let email = await getVerifyEmailHint();
+  if (!email && hintToken) {
+    const peeked = await peekAuthToken("verify", hintToken);
+    email = "email" in peeked && peeked.email ? peeked.email : null;
+  }
   if (!email) {
     logger.warn("EMAIL RESEND ERROR: NO_HINT");
     return { error: "Não encontramos um e-mail para reenviar. Entre ou crie a conta novamente." };
@@ -210,20 +216,35 @@ export async function resendVerificationAction() {
   }
 }
 
-export async function verifyEmailByToken(raw: string) {
-  const consumed = await consumeAuthToken("verify", raw);
-  if (!consumed.ok) return consumed;
-  const user = await prisma.user.findUnique({ where: { email: consumed.email } });
-  if (!user) return { ok: false as const, reason: "invalid" as const };
-  if (!user.emailVerified) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { emailVerified: new Date() },
-    });
-    await sendWelcomeEmail({ to: user.email, userId: user.id, name: user.name });
+export async function confirmEmailVerificationAction(_prev: unknown, formData: FormData) {
+  const limited = await rateLimitGuard("confirm-email", 12, 15 * 60_000);
+  if (limited) return limited;
+  const raw = typeof formData.get("token") === "string" ? String(formData.get("token")) : "";
+  if (!raw.trim()) {
+    return { error: verificationFailureMessage("invalid") };
   }
-  await clearVerifyEmailHint();
-  const loginToken = await issueAuthToken("autologin", user.email);
-  await signIn("credentials", { email: user.email, verifyLoginToken: loginToken, password: "verified", redirect: false });
-  return { ok: true as const, onboardingCompleted: user.onboardingCompleted };
+  try {
+    const result = await confirmEmailFromToken(raw);
+    if (!result.ok) {
+      return { error: verificationFailureMessage(result.reason) };
+    }
+    await clearVerifyEmailHint();
+    const loginToken = await issueAuthToken("autologin", result.email);
+    try {
+      await signIn("credentials", {
+        email: result.email,
+        verifyLoginToken: loginToken,
+        password: "verified",
+        redirect: false,
+      });
+    } catch (error) {
+      if (error instanceof AuthError) redirect("/login?verified=1");
+      throw error;
+    }
+    redirect(result.onboardingCompleted ? "/studio" : "/onboarding");
+  } catch (error) {
+    if (isNextRedirectError(error)) throw error;
+    logger.warn({ errType: safeErrorType(error) }, "EMAIL VERIFY CONFIRM ERROR");
+    return { error: "Não foi possível confirmar o e-mail. Tente de novo." };
+  }
 }

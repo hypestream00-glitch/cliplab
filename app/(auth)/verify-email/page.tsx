@@ -1,33 +1,48 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { brand } from "@/lib/config/brand";
 import { maskEmail } from "@/lib/email/escape";
-import { getVerifyEmailHint, setVerifyEmailHint } from "@/lib/email/hint-cookie";
-import { verifyEmailByToken } from "@/app/(auth)/actions";
+import { getVerifyEmailHint } from "@/lib/email/hint-cookie";
+import { peekAuthToken } from "@/lib/email/tokens";
+import { isEmailLinkPrefetch } from "@/lib/email/verify-request";
+import { verificationFailureMessage } from "@/lib/email/verify";
 import { VerifyEmailClient } from "@/app/(auth)/verify-email-client";
+import { ConfirmEmailClient } from "@/app/(auth)/confirm-email-client";
 import type { PageSearchProps } from "@/types/routes";
 
 export const metadata = { title: "Verifique seu e-mail" };
+export const dynamic = "force-dynamic";
 
 export default async function VerifyEmailPage({ searchParams }: PageSearchProps) {
   const params = await searchParams;
   const token = typeof params.token === "string" ? params.token : "";
   if (token) {
-    const result = await verifyEmailByToken(token);
-    if (result.ok) {
-      redirect(result.onboardingCompleted ? "/studio" : "/onboarding");
+    if (isEmailLinkPrefetch(await headers())) {
+      return (
+        <AuthCard title="Confirme seu e-mail">
+          <p className="text-[14px] text-muted-foreground">
+            Abra este link no navegador para ativar sua conta. O token ainda não foi usado.
+          </p>
+        </AuthCard>
+      );
     }
-    const expiredEmail = "email" in result && result.email ? result.email : null;
-    if (expiredEmail) {
-      await setVerifyEmailHint(expiredEmail);
+    const peeked = await peekAuthToken("verify", token);
+    if (peeked.ok) {
+      return (
+        <AuthCard title="Confirme seu e-mail">
+          <p className="text-[14px] text-muted-foreground">
+            Estamos confirmando <span className="text-foreground">{maskEmail(peeked.email)}</span>.
+          </p>
+          <ConfirmEmailClient token={token} />
+        </AuthCard>
+      );
     }
+    const expiredEmail = "email" in peeked && peeked.email ? peeked.email : null;
     return (
       <AuthCard title="Link expirado">
-        <p className="text-[14px] text-muted-foreground">
-          Este link de verificação não é mais válido. Solicite um novo e-mail para continuar.
-        </p>
-        <VerifyEmailClient masked={expiredEmail ? maskEmail(expiredEmail) : null} expired />
+        <p className="text-[14px] text-muted-foreground">{verificationFailureMessage(peeked.reason)}</p>
+        <VerifyEmailClient masked={expiredEmail ? maskEmail(expiredEmail) : null} expired token={token} />
       </AuthCard>
     );
   }

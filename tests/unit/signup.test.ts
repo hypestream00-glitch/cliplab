@@ -114,7 +114,9 @@ describe("completeSignup", () => {
         data: expect.objectContaining({ email: "pablo@example.com", passwordHash: "$2a$12$hashed" }),
       }),
     );
-    expect(sendVerify).toHaveBeenCalledWith(expect.objectContaining({ to: "pablo@example.com", userId: "user_1" }));
+    expect(sendVerify).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "pablo@example.com", userId: "user_1", rawToken: "raw-verify-token" }),
+    );
   });
 
   it("rejects an email that already exists", async () => {
@@ -166,16 +168,14 @@ describe("completeSignup", () => {
 
 describe("signup production URLs", () => {
   it("requires public HTTPS APP_URL/AUTH_URL and does not use localhost in verify links when set", () => {
-    expect(signupAppUrlOk({ APP_URL: "https://cliplab-production-6972.up.railway.app" } as unknown as NodeJS.ProcessEnv)).toBe(true);
+    expect(signupAppUrlOk({ APP_URL: "https://cortaclip.com" } as unknown as NodeJS.ProcessEnv)).toBe(true);
     expect(signupAppUrlOk({ APP_URL: "http://localhost:3000" } as unknown as NodeJS.ProcessEnv)).toBe(false);
     const prevApp = process.env.APP_URL;
     const prevAuth = process.env.AUTH_URL;
-    process.env.APP_URL = "https://cliplab-production-6972.up.railway.app";
-    process.env.AUTH_URL = "https://cliplab-production-6972.up.railway.app";
-    expect(appOrigin()).toBe("https://cliplab-production-6972.up.railway.app");
-    expect(appPathUrl("/verify-email?token=abc")).toBe(
-      "https://cliplab-production-6972.up.railway.app/verify-email?token=abc",
-    );
+    process.env.APP_URL = "https://cortaclip.com";
+    process.env.AUTH_URL = "https://cortaclip.com";
+    expect(appOrigin()).toBe("https://cortaclip.com");
+    expect(appPathUrl("/verify-email?token=abc")).toBe("https://cortaclip.com/verify-email?token=abc");
     expect(appPathUrl("/verify-email")).not.toContain("localhost");
     if (prevApp) process.env.APP_URL = prevApp;
     else delete process.env.APP_URL;

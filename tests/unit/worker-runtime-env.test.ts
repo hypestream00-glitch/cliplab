@@ -35,6 +35,8 @@ describe("worker runtime env", () => {
   it("logs presence only, never secret values", () => {
     vi.stubEnv("REDIS_URL", "rediss://example");
     vi.stubEnv("DATABASE_URL", "postgresql://example");
+    vi.stubEnv("APP_URL", "");
+    vi.stubEnv("AUTH_URL", "");
     const lines: string[] = [];
     const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
       lines.push(String(chunk).replace(/\n$/, ""));
@@ -42,7 +44,12 @@ describe("worker runtime env", () => {
     });
     logWorkerEnvPresence();
     spy.mockRestore();
-    expect(lines).toEqual(["REDIS_URL PRESENT: true", "DATABASE_URL PRESENT: true"]);
+    expect(lines).toEqual([
+      "REDIS_URL PRESENT: true",
+      "DATABASE_URL PRESENT: true",
+      "APP_URL PRESENT: false",
+      "AUTH_URL PRESENT: false",
+    ]);
     expect(lines.join("\n")).not.toMatch(/rediss:\/\/example|postgresql:\/\/example/i);
   });
 });
@@ -84,6 +91,8 @@ describe("start-worker env preservation", () => {
     const bundle = readFileSync(path.join(root, "dist/worker.mjs"), "utf8");
     expect(bundle).toContain("REDIS_URL");
     expect(bundle).toContain("DATABASE_URL");
+    expect(bundle).toContain("APP_URL");
+    expect(bundle).toContain("AUTH_URL");
     expect(bundle).not.toContain("rediss://example");
     expect(bundle).not.toMatch(/define:\s*\{[^}]*REDIS_URL/);
 
@@ -106,6 +115,8 @@ describe("start-worker env preservation", () => {
     expect(output).toMatch(/WORKER BUILD:/);
     expect(output).toMatch(/REDIS_URL PRESENT: true/);
     expect(output).toMatch(/DATABASE_URL PRESENT: true/);
+    expect(output).toMatch(/APP_URL PRESENT: false/);
+    expect(output).toMatch(/AUTH_URL PRESENT: false/);
     expect(output).not.toMatch(/rediss:\/\/example/);
     expect(output).not.toMatch(/postgresql:\/\/example/);
     expect(output).not.toMatch(/WORKER PREFLIGHT FAIL/);

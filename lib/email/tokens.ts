@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { hashToken, randomToken } from "@/lib/security/crypto";
+import { normalizeRawToken } from "@/lib/email/token-encoding";
 
 export type AuthTokenKind = "verify" | "reset" | "autologin";
 
@@ -11,6 +12,23 @@ const TTL_MS: Record<AuthTokenKind, number> = {
 
 export function tokenIdentifier(kind: AuthTokenKind, email: string) {
   return `${kind}:${email.toLowerCase()}`;
+}
+
+export function tokenTtlMs(kind: AuthTokenKind) {
+  return TTL_MS[kind];
+}
+
+function emailFromIdentifier(kind: AuthTokenKind, identifier: string) {
+  return identifier.slice(kind.length + 1);
+}
+
+async function findAuthToken(kind: AuthTokenKind, raw: string) {
+  const normalized = normalizeRawToken(raw);
+  if (!normalized) return null;
+  const token = hashToken(normalized);
+  return prisma.verificationToken.findFirst({
+    where: { token, identifier: { startsWith: `${kind}:` } },
+  });
 }
 
 export async function issueAuthToken(kind: AuthTokenKind, email: string) {
@@ -29,18 +47,26 @@ export async function issueAuthToken(kind: AuthTokenKind, email: string) {
   return raw;
 }
 
-export async function consumeAuthToken(kind: AuthTokenKind, raw: string) {
-  const token = hashToken(raw);
-  const record = await prisma.verificationToken.findFirst({
-    where: { token, identifier: { startsWith: `${kind}:` } },
-  });
+/** Validate without deleting. Safe for GET/prefetch/email scanners. */
+export async function peekAuthToken(kind: AuthTokenKind, raw: string) {
+  const record = await findAuthToken(kind, raw);
   if (!record) return { ok: false as const, reason: "invalid" as const };
+  const email = emailFromIdentifier(kind, record.identifier);
+  if (record.expires.getTime() <= Date.now()) {
+    return { ok: false as const, reason: "expired" as const, email };
+  }
+  return { ok: true as const, email };
+}
+
+export async function consumeAuthToken(kind: AuthTokenKind, raw: string) {
+  const record = await findAuthToken(kind, raw);
+  if (!record) return { ok: false as const, reason: "invalid" as const };
+  const email = emailFromIdentifier(kind, record.identifier);
   if (record.expires.getTime() <= Date.now()) {
     await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier } });
-    return { ok: false as const, reason: "expired" as const, email: record.identifier.slice(kind.length + 1) };
+    return { ok: false as const, reason: "expired" as const, email };
   }
   await prisma.verificationToken.deleteMany({ where: { identifier: record.identifier } });
-  const email = record.identifier.slice(kind.length + 1);
   return { ok: true as const, email };
 }
 

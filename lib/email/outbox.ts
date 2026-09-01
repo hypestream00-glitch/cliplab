@@ -5,7 +5,11 @@ import { encryptSecret, decryptSecret } from "@/lib/security/crypto";
 import { isEmailConfigured } from "@/lib/email/config";
 import { sendEmail } from "@/lib/email/send-email";
 import { renderEmailTemplate, type EmailTemplateId, type EmailTemplateVars } from "@/lib/email/templates";
-import { appPathUrl } from "@/lib/email/app-url";
+import {
+  isUsablePublicActionUrl,
+  passwordResetEmailUrl,
+  verificationEmailUrl,
+} from "@/lib/email/app-url";
 import { withTimeout, safeErrorType } from "@/lib/async/timeout";
 import { isPublicHttpsUrl } from "@/lib/env/app-url";
 import type { Prisma } from "@/generated/prisma/client";
@@ -31,11 +35,17 @@ function backoffMs(attempts: number) {
 }
 
 function withActionUrl(type: EmailTemplateId, vars: EmailTemplateVars, rawToken?: string): EmailTemplateVars {
-  if (vars.actionUrl && isPublicHttpsUrl(vars.actionUrl)) return vars;
+  if (type !== "verify-email" && type !== "password-reset") {
+    if (vars.actionUrl && isPublicHttpsUrl(vars.actionUrl)) return vars;
+    return vars;
+  }
+  if (vars.actionUrl && isUsablePublicActionUrl(vars.actionUrl)) return vars;
   if (!rawToken) return vars;
-  if (type === "verify-email") return { ...vars, actionUrl: appPathUrl(`/verify-email?token=${encodeURIComponent(rawToken)}`) };
-  if (type === "password-reset") return { ...vars, actionUrl: appPathUrl(`/reset-password?token=${encodeURIComponent(rawToken)}`) };
-  return vars;
+  const rebuilt = type === "verify-email" ? verificationEmailUrl(rawToken) : passwordResetEmailUrl(rawToken);
+  if (isUsablePublicActionUrl(rebuilt)) return { ...vars, actionUrl: rebuilt };
+  if (vars.actionUrl && isPublicHttpsUrl(vars.actionUrl)) return vars;
+  logger.warn({ type }, "EMAIL ACTION URL ORIGIN NOT PUBLIC");
+  return { ...vars, actionUrl: rebuilt };
 }
 
 export async function enqueueEmail(input: EnqueueEmailInput) {

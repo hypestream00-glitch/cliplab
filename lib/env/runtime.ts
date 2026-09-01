@@ -12,4 +12,6 @@ export function runtimeEnvPresent(name: string): boolean {
 export function logWorkerEnvPresence() {
   process.stdout.write(`REDIS_URL PRESENT: ${runtimeEnvPresent("REDIS_URL")}\n`);
   process.stdout.write(`DATABASE_URL PRESENT: ${runtimeEnvPresent("DATABASE_URL")}\n`);
+  process.stdout.write(`APP_URL PRESENT: ${runtimeEnvPresent("APP_URL")}\n`);
+  process.stdout.write(`AUTH_URL PRESENT: ${runtimeEnvPresent("AUTH_URL")}\n`);
 }

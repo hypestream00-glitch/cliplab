@@ -16,7 +16,7 @@ const findUnique = vi.fn();
 const findMany = vi.fn();
 const count = vi.fn();
 
-const sendMock = vi.fn(async (): Promise<{ ok: true } | { ok: false; error: string }> => ({
+const sendMock = vi.fn<(...args: unknown[]) => Promise<{ ok: true } | { ok: false; error: string }>>(async () => ({
   ok: false,
   error: "SMTP_SEND_FAILED",
 }));
@@ -58,7 +58,7 @@ function setSmtpConfigured() {
 }
 
 vi.mock("@/lib/email/send-email", () => ({
-  sendEmail: () => sendMock(),
+  sendEmail: (message: unknown) => sendMock(message),
   getEmailProvider: () => ({
     name: "smtp",
     send: () => sendMock(),
@@ -205,6 +205,25 @@ describe("auth tokens", () => {
     deleteMany.mockReset();
   });
 
+  it("peeks without consuming so prefetch cannot burn a one-time token", async () => {
+    create.mockResolvedValue({});
+    deleteMany.mockResolvedValue({ count: 1 });
+    const { issueAuthToken, peekAuthToken, consumeAuthToken } = await import("@/lib/email/tokens");
+    const raw = await issueAuthToken("verify", "peek@example.com");
+    deleteMany.mockClear();
+    findFirst.mockResolvedValue({
+      identifier: "verify:peek@example.com",
+      token: hashToken(raw),
+      expires: new Date(Date.now() + 60_000),
+    });
+    const peeked = await peekAuthToken("verify", raw);
+    expect(peeked).toEqual({ ok: true, email: "peek@example.com" });
+    expect(deleteMany).not.toHaveBeenCalled();
+    const consumed = await consumeAuthToken("verify", raw);
+    expect(consumed).toEqual({ ok: true, email: "peek@example.com" });
+    expect(deleteMany).toHaveBeenCalled();
+  });
+
   it("stores only the hash and is single use", async () => {
     create.mockResolvedValue({});
     deleteMany.mockResolvedValue({ count: 1 });
@@ -309,8 +328,8 @@ describe("email outbox", () => {
   it("stores the production verify URL and never localhost", async () => {
     const prevApp = process.env.APP_URL;
     const prevAuth = process.env.AUTH_URL;
-    process.env.APP_URL = "https://cliplab-production-6972.up.railway.app";
-    process.env.AUTH_URL = "https://cliplab-production-6972.up.railway.app";
+    process.env.APP_URL = "https://cortaclip.com";
+    process.env.AUTH_URL = "https://cortaclip.com";
     findUnique.mockResolvedValueOnce(null).mockResolvedValue({ id: "mail_url", status: "PENDING" });
     create.mockResolvedValueOnce({
       id: "mail_url",
@@ -330,14 +349,56 @@ describe("email outbox", () => {
       flush: false,
     });
     const payload = create.mock.calls[0][0].data.payload as { actionUrl?: string };
-    expect(payload.actionUrl).toBe(
-      "https://cliplab-production-6972.up.railway.app/verify-email?token=verify-token",
-    );
+    expect(payload.actionUrl).toBe("https://cortaclip.com/verify-email?token=verify-token");
     expect(payload.actionUrl).not.toContain("localhost");
+    expect(payload.actionUrl).not.toMatch(/railway\.app|cliplab/i);
     if (prevApp) process.env.APP_URL = prevApp;
     else delete process.env.APP_URL;
     if (prevAuth) process.env.AUTH_URL = prevAuth;
     else delete process.env.AUTH_URL;
+  });
+
+  it("rebuilds retired Railway verify URLs from APP_URL during worker flush", async () => {
+    const prev = snapshotSmtpEnv();
+    const prevApp = process.env.APP_URL;
+    const prevAuth = process.env.AUTH_URL;
+    const prevKey = process.env.ENCRYPTION_KEY;
+    setSmtpConfigured();
+    process.env.APP_URL = "https://cortaclip.com";
+    process.env.AUTH_URL = "https://cortaclip.com";
+    process.env.ENCRYPTION_KEY = "test-encryption-key-for-cliplab";
+    sendMock.mockResolvedValueOnce({ ok: true });
+    const { encryptSecret } = await import("@/lib/security/crypto");
+    findUnique.mockResolvedValue({
+      id: "mail_rewrite",
+      type: "verify-email",
+      recipient: "a@b.com",
+      status: "PENDING",
+      attempts: 0,
+      payload: {
+        actionUrl: "https://cliplab-production-6972.up.railway.app/verify-email?token=raw-verify-token",
+        tokenCipher: encryptSecret("raw-verify-token"),
+      },
+    });
+    update.mockResolvedValue({});
+    const { flushEmail } = await import("@/lib/email/outbox");
+    await flushEmail("mail_rewrite");
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        html: expect.stringContaining("https://cortaclip.com/verify-email?token=raw-verify-token"),
+        text: expect.stringContaining("https://cortaclip.com/verify-email?token=raw-verify-token"),
+      }),
+    );
+    const dumped = JSON.stringify(sendMock.mock.calls[0]);
+    expect(dumped).not.toMatch(/railway\.app|localhost/i);
+    restoreSmtpEnv(prev);
+    if (prevApp) process.env.APP_URL = prevApp;
+    else delete process.env.APP_URL;
+    if (prevAuth) process.env.AUTH_URL = prevAuth;
+    else delete process.env.AUTH_URL;
+    if (prevKey) process.env.ENCRYPTION_KEY = prevKey;
+    else delete process.env.ENCRYPTION_KEY;
   });
 
   it("worker processEmailOutbox sends pending mail and marks SENT", async () => {
@@ -351,7 +412,7 @@ describe("email outbox", () => {
       recipient: "a@b.com",
       status: "PENDING",
       attempts: 0,
-      payload: { actionUrl: "https://cliplab-production-6972.up.railway.app/verify-email?token=abc" },
+      payload: { actionUrl: "https://cortaclip.com/verify-email?token=abc" },
     });
     update.mockResolvedValue({});
     const { processEmailOutbox } = await import("@/lib/email/outbox");
