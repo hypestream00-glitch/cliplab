@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { evaluateWorkerPreflight } from "@/lib/queue/worker-preflight";
-import { isBlockedIngestUrl } from "@/lib/security/ssrf";
+import { isBlockedIngestUrl, isBlockedIp } from "@/lib/security/ssrf";
 import { getPlanLimits } from "@/lib/config/plans";
 import { tenantWhere } from "@/lib/security/tenant";
 import { canCancelPublication } from "@/lib/social/publication-status";
@@ -44,6 +44,7 @@ describe("ssrf ingest guard", () => {
     expect(isBlockedIngestUrl("http://10.0.0.8/clip.mp4")).toBe(true);
     expect(isBlockedIngestUrl("file:///etc/passwd")).toBe(true);
     expect(isBlockedIngestUrl("https://cdn.example.com/video.mp4")).toBe(false);
+    expect(isBlockedIp("192.168.0.5")).toBe(true);
   });
 });
 

@@ -30,7 +30,10 @@ describe("trending page and filters", () => {
     expect(page).toContain("🔥 Em alta");
     expect(page).toContain("Descubra vídeos e conteúdos com potencial para gerar clips virais.");
     expect(page).toContain("Mais quentes");
-    expect(page).toContain("Usar como referência");
+    expect(page).toContain("Abrir original");
+    expect(page).toContain("✨ Criar clips");
+    expect(page).toContain("Fonte ainda não disponível");
+    expect(page).toContain("Conecte uma fonte de tendências");
     expect(page).not.toContain("scrape");
     expect(TRENDING_PLATFORMS).toEqual(["YOUTUBE", "TWITCH", "KICK", "TIKTOK", "INSTAGRAM"]);
     expect(TRENDING_CATEGORIES).toContain("Games");

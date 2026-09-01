@@ -300,9 +300,12 @@ describe("visual and public copy", () => {
     expect(createPage).toMatch(/Criar clips com[\s\S]*IA/);
     expect(createPage).toContain("Envie um vídeo e deixe a IA encontrar os melhores momentos.");
     const createForm = readFileSync(path.join(root, "app/(studio)/studio/create/create-form.tsx"), "utf8");
-    expect(createForm).toContain("Em breve");
     expect(createForm).toContain("/api/uploads/init");
-    expect(createForm).not.toMatch(/sourceUrl:\s*url/);
+    expect(createForm).toContain("/api/ingest/preview");
+    expect(createForm).toContain("/api/ingest/import");
+    expect(createForm).toContain("Cole o link do vídeo");
+    expect(createForm).toContain("Importar vídeo");
+    expect(createForm).not.toContain("Em breve");
     const theme = readFileSync(path.join(root, "app/globals.css"), "utf8");
     expect(theme).toContain("--surface:");
     expect(theme).toContain("--magenta:");

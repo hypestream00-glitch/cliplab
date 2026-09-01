@@ -20,5 +20,9 @@ export function createAnalyticsWorker() {
       await syncDueYouTubeAnalytics();
     }
     await syncCompetitionSubmissionMetrics();
+    const { refreshTrendingCatalog } = await import("@/lib/trending/refresh");
+    const { persistTrendScores } = await import("@/lib/trending/query");
+    await refreshTrendingCatalog();
+    await persistTrendScores();
   });
 }

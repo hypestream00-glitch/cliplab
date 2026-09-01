@@ -77,8 +77,10 @@ async function maybeSyncAnalyticsInProcess() {
     const { syncCompetitionSubmissionMetrics } = await import("@/lib/competitions/sync");
     const { refreshCompetitionStatuses } = await import("@/lib/competitions/admin");
     const { persistTrendScores } = await import("@/lib/trending/query");
+    const { refreshTrendingCatalog } = await import("@/lib/trending/refresh");
     await refreshCompetitionStatuses();
     await syncCompetitionSubmissionMetrics();
+    await refreshTrendingCatalog().catch(() => undefined);
     await persistTrendScores().catch(() => undefined);
   } catch (error) {
     logger.warn({ errType: error instanceof Error ? error.name : "Error" }, "in-process analytics sync skipped");

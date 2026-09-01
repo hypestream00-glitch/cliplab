@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { computeTrendScore } from "@/lib/trending/score";
 import { TRENDING_CATEGORIES, TRENDING_PLATFORMS } from "@/lib/competitions/platforms";
+import { isTwitchTrendingConfigured, isYouTubeTrendingConfigured } from "@/lib/trending/providers";
 
 export { TRENDING_CATEGORIES, TRENDING_PLATFORMS };
 
@@ -38,6 +39,16 @@ export async function listTrendingItems(params: {
     return (b.trendScore ?? -1) - (a.trendScore ?? -1);
   });
   return scored;
+}
+
+export function trendingProviderAvailability(source: NodeJS.ProcessEnv = process.env) {
+  return {
+    YOUTUBE: isYouTubeTrendingConfigured(source),
+    TWITCH: isTwitchTrendingConfigured(source),
+    KICK: false,
+    TIKTOK: false,
+    INSTAGRAM: false,
+  } as const;
 }
 
 export async function persistTrendScores() {

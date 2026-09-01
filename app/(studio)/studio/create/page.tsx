@@ -4,20 +4,23 @@ import { getPlanLimits } from "@/lib/config/plans";
 import { getWorkspacePlanCode, getMonthlyUsage, formatMinutesUsed } from "@/lib/billing/usage";
 import { CreateHeroArt } from "@/components/create/hero-art";
 import Link from "next/link";
+import type { PageSearchProps } from "@/types/routes";
 
 export const metadata = { title: "Criar clips" };
 
-export default async function CreateProjectPage() {
+export default async function CreateProjectPage({ searchParams }: PageSearchProps) {
   const { workspace } = await requireWorkspaceContext();
+  const params = await searchParams;
+  const sourceUrl = typeof params.sourceUrl === "string" ? params.sourceUrl : "";
   const planCode = await getWorkspacePlanCode(workspace.id);
   const limits = getPlanLimits(planCode);
   const usage = await getMonthlyUsage(workspace.id);
   const blocked = usage.remainingSeconds <= 0;
   return (
     <div>
-      <div className="mb-8 flex items-start justify-between gap-6">
+      <div className="mb-10 flex items-start justify-between gap-8">
         <div className="min-w-0">
-          <h1 className="text-[28px] leading-9 font-semibold tracking-tight text-white">
+          <h1 className="text-[30px] leading-9 font-semibold tracking-tight text-white">
             Criar clips com <span className="gradient-brand-text">IA</span> ✨
           </h1>
           <p className="mt-2 text-[15px] leading-6 text-text-secondary">
@@ -41,7 +44,7 @@ export default async function CreateProjectPage() {
           </Link>
         </div>
       ) : (
-        <CreateProjectForm maxClipsPerProject={limits.maxClipsPerProject} />
+        <CreateProjectForm maxClipsPerProject={limits.maxClipsPerProject} initialSourceUrl={sourceUrl} />
       )}
     </div>
   );

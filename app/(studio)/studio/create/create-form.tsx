@@ -81,12 +81,14 @@ function putFile(url: string, file: File, headers: Record<string, string>, onPro
 
 export function CreateProjectForm({
   maxClipsPerProject = 5,
+  initialSourceUrl = "",
 }: {
   maxClipsPerProject?: number;
+  initialSourceUrl?: string;
 }) {
   const router = useRouter();
   const [advanced, setAdvanced] = useState(false);
-  const [sourceTab, setSourceTab] = useState<"file" | "link">("file");
+  const [sourceTab, setSourceTab] = useState<"file" | "link">(initialSourceUrl ? "link" : "file");
   const [clipCount, setClipCount] = useState(Math.min(5, maxClipsPerProject));
   const [duration, setDuration] = useState("15-30");
   const [aspect, setAspect] = useState("9:16");
@@ -95,6 +97,18 @@ export function CreateProjectForm({
   const [phase, setPhase] = useState<UploadPhase>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [sourceUrl, setSourceUrl] = useState(initialSourceUrl);
+  const [linkStatus, setLinkStatus] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{
+    title: string | null;
+    creatorName: string | null;
+    thumbnailUrl: string | null;
+    durationSeconds: number | null;
+    platformLabel: string;
+    ingestSupported: boolean;
+    message?: string;
+    url: string;
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const uploadIdRef = useRef<string | null>(null);
@@ -103,6 +117,12 @@ export function CreateProjectForm({
   useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
+
+  useEffect(() => {
+    if (!initialSourceUrl.trim()) return;
+    void analyzeLink(initialSourceUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSourceUrl]);
 
   useEffect(() => {
     const raw = sessionStorage.getItem(SESSION_KEY);
@@ -196,12 +216,100 @@ export function CreateProjectForm({
     setFileMeta(next);
   }
 
+  async function analyzeLink(url = sourceUrl) {
+    const trimmed = url.trim();
+    if (!trimmed) {
+      setError("Link inválido.");
+      return;
+    }
+    setError(null);
+    setLinkStatus("Analisando link...");
+    setPhase("preparing");
+    try {
+      const res = await fetch("/api/ingest/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      const body = (await res.json()) as { error?: string; preview?: typeof preview };
+      if (!res.ok || !body.preview) {
+        setPreview(null);
+        setPhase("error");
+        setLinkStatus(null);
+        setError(body.error || "Link inválido.");
+        return;
+      }
+      setPreview(body.preview);
+      setSourceUrl(body.preview.url);
+      setPhase("idle");
+      setLinkStatus(body.preview.ingestSupported ? "Vídeo pronto." : body.preview.message || "Este link ainda não é suportado.");
+    } catch {
+      setPhase("error");
+      setLinkStatus(null);
+      setError("Não foi possível importar este conteúdo.");
+    }
+  }
+
+  async function importFromLink(form: HTMLFormElement) {
+    const url = (preview?.url || sourceUrl).trim();
+    if (!url) {
+      setError("Link inválido.");
+      return;
+    }
+    if (preview && !preview.ingestSupported) {
+      setError(preview.message || "Este link ainda não é suportado.");
+      return;
+    }
+    abortRef.current?.abort();
+    const abort = new AbortController();
+    abortRef.current = abort;
+    setPhase("uploading");
+    setLinkStatus("Importando vídeo...");
+    setError(null);
+    try {
+      const payload = formPayload(form, preview?.title || "video.mp4");
+      const res = await fetch("/api/ingest/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: abort.signal,
+        body: JSON.stringify({
+          ...payload,
+          sourceKind: "DIRECT_URL",
+          sourceUrl: url,
+          url,
+          clipCount,
+          clipDuration: duration,
+          outputAspect: aspect,
+          authorized: true,
+        }),
+      });
+      const body = (await res.json()) as { error?: string; projectId?: string };
+      if (!res.ok || !body.projectId) {
+        throw new Error(body.error || "Não foi possível importar este conteúdo.");
+      }
+      setPhase("processing");
+      setLinkStatus("Preparando vídeo...");
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ projectId: body.projectId }));
+      setLinkStatus("Vídeo pronto.");
+      router.push(`/studio/projects/${body.projectId}`);
+    } catch (err) {
+      if (abort.signal.aborted) return;
+      setPhase("error");
+      setLinkStatus(null);
+      setError(friendlyError(err instanceof Error ? err.message : "Não foi possível importar este conteúdo."));
+    }
+  }
+
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     const form = event.currentTarget;
     if (!(form.elements.namedItem("authorized") as HTMLInputElement | null)?.checked) {
       setError("Confirme a autorização de uso.");
+      return;
+    }
+    if (sourceTab === "link") {
+      await importFromLink(form);
       return;
     }
     const file = inputRef.current?.files?.[0];
@@ -314,13 +422,13 @@ export function CreateProjectForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-[880px] space-y-8">
+    <form onSubmit={onSubmit} className="mx-auto max-w-[1120px] space-y-7">
       <div className="flex gap-2">
         <button
           type="button"
           className={cn(
             "h-10 rounded-xl border px-4 text-[13px] font-medium",
-            sourceTab === "file" ? "border-magenta/50 bg-magenta/10 text-white" : "text-text-secondary",
+            sourceTab === "file" ? "border-magenta/50 bg-magenta/10 text-white glow-primary" : "text-text-secondary",
           )}
           onClick={() => setSourceTab("file")}
         >
@@ -328,18 +436,88 @@ export function CreateProjectForm({
         </button>
         <button
           type="button"
-          className="h-10 rounded-xl border px-4 text-[13px] font-medium text-text-secondary"
-          disabled
-          aria-disabled="true"
-          title="Em breve"
+          className={cn(
+            "h-10 rounded-xl border px-4 text-[13px] font-medium",
+            sourceTab === "link" ? "border-magenta/50 bg-magenta/10 text-white glow-primary" : "text-text-secondary",
+          )}
+          onClick={() => setSourceTab("link")}
         >
-          Link <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase">Em breve</span>
+          Link
         </button>
       </div>
 
+      {sourceTab === "link" ? (
+        <div className="relative overflow-hidden rounded-3xl bg-[#07070a] px-6 py-8 gradient-border sm:px-10">
+          <span className="pointer-events-none absolute inset-y-0 left-0 w-40 opacity-80" aria-hidden>
+            <svg viewBox="0 0 160 360" className="h-full w-full">
+              <defs>
+                <linearGradient id="linkWaveL" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#E92ACB" stopOpacity="0.55" />
+                  <stop offset="100%" stopColor="#8B3DFF" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path d="M0 20 C50 70 10 140 56 190 C90 236 8 280 0 340 Z" fill="url(#linkWaveL)" />
+              <circle cx="20" cy="110" r="70" fill="#E92ACB" fillOpacity="0.18" />
+            </svg>
+          </span>
+          <div className="relative z-10 mx-auto max-w-xl space-y-4">
+            <label htmlFor="sourceUrl" className="text-[14px] font-medium text-white">
+              Cole o link do vídeo
+            </label>
+            <input
+              id="sourceUrl"
+              name="sourceUrl"
+              value={sourceUrl}
+              onChange={(event) => {
+                setSourceUrl(event.target.value);
+                setPreview(null);
+              }}
+              placeholder="https://..."
+              className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-[14px] text-white outline-none placeholder:text-text-secondary"
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="inline-flex h-11 items-center rounded-xl gradient-brand px-4 text-[13px] font-semibold text-white disabled:opacity-60"
+                onClick={() => void analyzeLink()}
+                disabled={busy}
+              >
+                Importar vídeo
+              </button>
+              {preview?.ingestSupported ? (
+                <span className="inline-flex h-11 items-center text-[13px] text-text-secondary">{linkStatus}</span>
+              ) : null}
+            </div>
+            {linkStatus && !preview?.ingestSupported ? <p className="text-[13px] text-text-secondary">{linkStatus}</p> : null}
+            {preview ? (
+              <div className="flex gap-4 rounded-2xl border border-border bg-surface p-4">
+                {preview.thumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={preview.thumbnailUrl} alt="" className="h-20 w-32 rounded-lg object-cover" />
+                ) : (
+                  <div className="flex h-20 w-32 items-center justify-center rounded-lg bg-muted text-[11px] text-text-secondary">
+                    {preview.platformLabel}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-medium text-white">{preview.title ?? "Vídeo"}</p>
+                  <p className="mt-1 text-[12px] text-text-secondary">
+                    {preview.platformLabel}
+                    {preview.creatorName ? ` · ${preview.creatorName}` : ""}
+                    {preview.durationSeconds ? ` · ${preview.durationSeconds}s` : ""}
+                  </p>
+                  {!preview.ingestSupported ? (
+                    <p className="mt-2 text-[12px] text-gold">{preview.message ?? "Este link ainda não é suportado."}</p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : (
       <label
         className={cn(
-          "relative flex min-h-[380px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-3xl bg-[#07070a] px-8 py-10 text-center gradient-border",
+          "relative flex min-h-[440px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-3xl bg-[#07070a] px-8 py-14 text-center gradient-border",
           dragOver && "bg-magenta/5",
         )}
         onDragOver={(event) => {
@@ -358,28 +536,28 @@ export function CreateProjectForm({
           readFile(file);
         }}
       >
-        <span className="pointer-events-none absolute inset-y-0 left-0 w-36 opacity-70" aria-hidden>
-          <svg viewBox="0 0 140 340" className="h-full w-full">
+        <span className="pointer-events-none absolute inset-y-0 left-0 w-44 opacity-90" aria-hidden>
+          <svg viewBox="0 0 160 360" className="h-full w-full">
             <defs>
               <linearGradient id="waveL" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#E92ACB" stopOpacity="0.45" />
+                <stop offset="0%" stopColor="#E92ACB" stopOpacity="0.7" />
                 <stop offset="100%" stopColor="#8B3DFF" stopOpacity="0" />
               </linearGradient>
             </defs>
-            <path d="M0 40 C40 80 20 140 48 180 C70 214 10 250 0 300 Z" fill="url(#waveL)" />
-            <circle cx="18" cy="90" r="58" fill="#E92ACB" fillOpacity="0.16" />
+            <path d="M0 20 C56 70 8 140 62 190 C98 236 10 280 0 350 Z" fill="url(#waveL)" />
+            <circle cx="16" cy="100" r="86" fill="#E92ACB" fillOpacity="0.22" />
           </svg>
         </span>
-        <span className="pointer-events-none absolute inset-y-0 right-0 w-36 opacity-70" aria-hidden>
-          <svg viewBox="0 0 140 340" className="h-full w-full">
+        <span className="pointer-events-none absolute inset-y-0 right-0 w-44 opacity-90" aria-hidden>
+          <svg viewBox="0 0 160 360" className="h-full w-full">
             <defs>
               <linearGradient id="waveR" x1="1" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2563EB" stopOpacity="0.45" />
+                <stop offset="0%" stopColor="#2563EB" stopOpacity="0.7" />
                 <stop offset="100%" stopColor="#8B3DFF" stopOpacity="0" />
               </linearGradient>
             </defs>
-            <path d="M140 50 C100 90 122 150 92 190 C70 224 130 260 140 310 Z" fill="url(#waveR)" />
-            <circle cx="122" cy="240" r="62" fill="#2563EB" fillOpacity="0.16" />
+            <path d="M160 40 C104 90 152 150 98 200 C62 246 150 290 160 350 Z" fill="url(#waveR)" />
+            <circle cx="144" cy="250" r="86" fill="#2563EB" fillOpacity="0.22" />
           </svg>
         </span>
         {fileMeta ? (
@@ -426,10 +604,11 @@ export function CreateProjectForm({
         />
         <input type="hidden" name="sourceKind" value="UPLOAD" />
       </label>
+      )}
 
-      <div className="rounded-3xl p-7 gradient-border-config sm:p-8">
+      <div className="rounded-3xl p-6 gradient-border-config sm:p-7">
         <p className="text-[17px] font-semibold text-white">Configurações de criação</p>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className={cn("cursor-pointer rounded-2xl border p-5", !advanced && "border-magenta bg-magenta/10 glow-primary")}>
             <input type="radio" name="experience" className="sr-only" defaultChecked onChange={() => setAdvanced(false)} />
             <span className="flex items-start justify-between gap-2">
@@ -651,22 +830,24 @@ export function CreateProjectForm({
       </label>
       {error ? (
         <p className="text-[13px] text-destructive">
-          {error} {phase === "error" ? "Você pode tentar novamente com o mesmo arquivo." : ""}
+          {error} {phase === "error" && sourceTab === "file" ? "Você pode tentar novamente com o mesmo arquivo." : ""}
         </p>
       ) : null}
       <button
         type="submit"
         className="inline-flex h-16 w-full items-center justify-center gap-2 rounded-2xl gradient-brand text-[16px] font-semibold text-white shadow-[0_0_28px_rgba(139,61,255,0.28)] glow-primary transition hover:opacity-90 disabled:opacity-60"
-        disabled={busy}
+        disabled={busy || (sourceTab === "link" && Boolean(preview) && !preview?.ingestSupported)}
       >
         {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
         {phase === "error"
           ? "Tentar novamente"
-          : phase === "preparing" || phase === "uploading"
-            ? "Preparando seu vídeo..."
-            : statusLabel && busy
-              ? statusLabel
-              : "✨ Gerar clips"}
+          : sourceTab === "link"
+            ? "✨ Importar e criar clips"
+            : phase === "preparing" || phase === "uploading"
+              ? "Preparando seu vídeo..."
+              : statusLabel && busy
+                ? statusLabel
+                : "✨ Gerar clips"}
       </button>
       {phase === "uploading" || phase === "preparing" ? (
         <button type="button" className="w-full text-[12px] text-text-secondary underline-offset-2 hover:underline" onClick={() => void cancelUpload()}>

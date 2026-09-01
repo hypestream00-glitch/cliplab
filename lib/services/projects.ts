@@ -47,7 +47,9 @@ export async function createProject(params: {
       const { assertSafeIngestUrl } = await import("@/lib/security/ssrf");
       assertSafeIngestUrl(params.sourceUrl);
     }
-    throw new UrlIngestNotSupportedError();
+    if (!params.storageKey) {
+      throw new UrlIngestNotSupportedError();
+    }
   }
   const { assertWorkspaceJobQuota } = await import("@/lib/billing/usage");
   await assertWorkspaceJobQuota(params.workspaceId, "generation");
