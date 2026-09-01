@@ -21,8 +21,9 @@ import { logger } from "@/lib/logger";
 import { ffmpegMaxDurationMs } from "@/lib/ffmpeg/limits";
 import { analysisCreditKey } from "@/lib/webhooks/idempotency";
 import { notifyWorkspace } from "@/lib/services/notifications";
-import { sanitizePublicError } from "@/lib/ai/policy";
+import { sanitizePublicError, AiConfigurationError, EXTERNAL_AI_BLOCKED_MESSAGE } from "@/lib/ai/policy";
 import { OpenAiHttpError } from "@/lib/ai/openai-error";
+import { externalAiProcessingAllowed } from "@/lib/env/status";
 import { clampClipDurationRange } from "@/lib/config/clip-score";
 import type { Prisma, ProjectStatus } from "@/generated/prisma/client";
 
@@ -88,6 +89,9 @@ export async function processProjectPipeline(projectId: string) {
   };
 
   try {
+    if (!externalAiProcessingAllowed()) {
+      throw new AiConfigurationError(EXTERNAL_AI_BLOCKED_MESSAGE);
+    }
     if (!(await isFfmpegAvailable())) {
       throw new FFmpegUnavailableError();
     }

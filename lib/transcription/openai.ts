@@ -9,8 +9,9 @@ import { normalizeTranscript, type TranscriptSegmentInput, type TranscriptWord }
 import { mockTranscriptionProvider } from "@/lib/transcription/mock";
 import type { TranscriptionProvider, TranscriptionResult, TranscriptionUsage } from "@/lib/transcription/types";
 import { logger } from "@/lib/logger";
-import { openaiApiKey, resolveAiMode } from "@/lib/ai/policy";
+import { openaiApiKey, resolveAiMode, AiConfigurationError, EXTERNAL_AI_BLOCKED_MESSAGE } from "@/lib/ai/policy";
 import { whisperLanguageParam } from "@/lib/transcription/language";
+import { externalAiProcessingAllowed } from "@/lib/env/status";
 
 export class TranscriptionError extends Error {
   constructor(message: string) {
@@ -157,7 +158,17 @@ export function chunkWindows(durationMs: number, fileSize: number) {
 }
 
 export function getTranscriptionProvider(): TranscriptionProvider {
-  if (resolveAiMode() === "mock") return labeledMock();
+  if (resolveAiMode() === "mock") {
+    return {
+      ...labeledMock(),
+      async transcribe(params) {
+        if (!externalAiProcessingAllowed()) {
+          throw new AiConfigurationError(EXTERNAL_AI_BLOCKED_MESSAGE);
+        }
+        return labeledMock().transcribe(params);
+      },
+    };
+  }
   const key = openaiApiKey();
   return {
     id: "openai-whisper",

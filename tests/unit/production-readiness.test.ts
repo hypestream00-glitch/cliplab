@@ -7,7 +7,7 @@ import { rateLimit, resetRateLimitForTests } from "@/lib/security/rate-limit";
 import { livenessBody, readinessBody } from "@/lib/health/payload";
 import { LOG_REDACT_PATHS } from "@/lib/logger";
 import { isPrismaUniqueViolation, stripeCreditReference, analysisCreditKey } from "@/lib/webhooks/idempotency";
-import { corsOriginFor } from "@/lib/security/cors";
+import { corsOriginFor, allowedOrigins } from "@/lib/security/cors";
 import { envTruthy } from "@/lib/env/status";
 import { looksLikeVideoContainer } from "@/lib/media/validate";
 
@@ -118,6 +118,15 @@ describe("cors", () => {
   it("does not echo unknown origins", () => {
     expect(corsOriginFor("https://evil.example")).toBeNull();
     expect(corsOriginFor("http://localhost:3000")).toBe("http://localhost:3000");
+  });
+
+  it("does not default to localhost origins in production", () => {
+    expect(
+      allowedOrigins({ NODE_ENV: "production", AUTH_URL: "https://cliplab.up.railway.app" } as NodeJS.ProcessEnv),
+    ).toEqual(["https://cliplab.up.railway.app"]);
+    expect(
+      allowedOrigins({ NODE_ENV: "production" } as NodeJS.ProcessEnv).some((origin) => origin.includes("localhost")),
+    ).toBe(false);
   });
 });
 

@@ -1,7 +1,8 @@
 import type { TranscriptInput } from "@/lib/ai/provider";
 import { clampScore } from "@/lib/ai/provider";
 import { CLIP_ANALYSIS_JSON_SCHEMA, parseClipAnalysisJson, type StructuredClipCandidate } from "@/lib/ai/clip-schema";
-import { openaiApiKey, resolveAiMode } from "@/lib/ai/policy";
+import { openaiApiKey, resolveAiMode, AiConfigurationError, EXTERNAL_AI_BLOCKED_MESSAGE } from "@/lib/ai/policy";
+import { externalAiProcessingAllowed } from "@/lib/env/status";
 import { removeOverlappingCandidates } from "@/lib/ai/overlap";
 import { clampClipDurationRange, compositeViralScore } from "@/lib/config/clip-score";
 import { fetchWithBackoff } from "@/lib/http/retry";
@@ -182,6 +183,16 @@ export const openaiClipAnalysisProvider: ClipAnalysisProvider = {
 };
 
 export function getClipAnalysisProvider(): ClipAnalysisProvider {
+  if (!externalAiProcessingAllowed()) {
+    return {
+      id: "openai-clip-analysis-blocked",
+      mocked: true,
+      providerLabel: "MOCK",
+      async analyze() {
+        throw new AiConfigurationError(EXTERNAL_AI_BLOCKED_MESSAGE);
+      },
+    };
+  }
   return resolveAiMode() === "real" ? openaiClipAnalysisProvider : mockClipAnalysisProvider;
 }
 

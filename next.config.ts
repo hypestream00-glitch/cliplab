@@ -15,7 +15,9 @@ const securityHeaders = [
       "img-src 'self' data: blob: https:",
       "media-src 'self' blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https: http://localhost:3000 http://127.0.0.1:3000 ws://localhost:3000 ws://127.0.0.1:3000",
+      process.env.NODE_ENV === "production"
+        ? "connect-src 'self' https:"
+        : "connect-src 'self' https: http://localhost:3000 http://127.0.0.1:3000 ws://localhost:3000 ws://127.0.0.1:3000",
       "frame-src 'self' https://www.youtube.com https://youtube.com https://accounts.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",

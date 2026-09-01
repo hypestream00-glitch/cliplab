@@ -1,12 +1,13 @@
 const DEFAULT_ALLOWED = ["http://localhost:3000", "http://127.0.0.1:3000"];
 
-export function allowedOrigins() {
-  const extra = (process.env.CORS_ORIGINS ?? "")
+export function allowedOrigins(source: NodeJS.ProcessEnv = process.env) {
+  const extra = (source.CORS_ORIGINS ?? "")
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-  const auth = (process.env.AUTH_URL ?? "").replace(/\/$/, "");
-  return [...new Set([...DEFAULT_ALLOWED, ...extra, auth].filter(Boolean))];
+  const auth = (source.AUTH_URL ?? source.APP_URL ?? "").replace(/\/$/, "");
+  const defaults = source.NODE_ENV === "production" ? [] : DEFAULT_ALLOWED;
+  return [...new Set([...defaults, ...extra, auth].filter(Boolean))];
 }
 
 export function corsOriginFor(requestOrigin: string | null) {

@@ -38,6 +38,8 @@ export const envSchema = z.object({
   MEDIA_BASE_URL: optionalUrl,
   OPENAI_API_KEY: optionalString,
   OPENAI_MODEL: optionalString,
+  ALLOW_EXTERNAL_AI_PROCESSING: optionalBool,
+  ALLOW_SOCIAL_PUBLISH: optionalBool,
   TIKTOK_CLIENT_KEY: optionalString,
   TIKTOK_CLIENT_ID: optionalString,
   TIKTOK_CLIENT_SECRET: optionalString,

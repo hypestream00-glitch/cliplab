@@ -23,6 +23,7 @@ import {
 } from "@/lib/social/upload-post/publish";
 import { UploadPostApiError, UploadPostConfigError, UploadPostPlanError } from "@/lib/social/upload-post/errors";
 import { visibleClipWhere, visibleClipLibraryWhere, visibleSocialAccountWhere } from "@/lib/data/visibility";
+import { socialPublishAllowed } from "@/lib/env/status";
 
 export async function createPublication(params: {
   workspaceId: string;
@@ -80,6 +81,9 @@ export async function createPublication(params: {
       (account.provider === "UPLOAD_POST" || ["TIKTOK", "INSTAGRAM", "FACEBOOK", "X", "YOUTUBE"].includes(account.platform)) &&
       !account.mock,
   );
+  if (realSocial && !socialPublishAllowed()) {
+    throw new Error("Publicação social está desligada (ALLOW_SOCIAL_PUBLISH=false).");
+  }
   if (realSocial && !params.confirmReal) {
     throw new Error("Confirme a publicação real nesta conta.");
   }
@@ -150,6 +154,10 @@ export async function processPublication(publicationId: string) {
   });
   if (!publication || !publication.clipId) return;
   if (publication.status === "CANCELED") return;
+  if (!publication.mock && !socialPublishAllowed()) {
+    logger.warn({ publicationId }, "ALLOW_SOCIAL_PUBLISH=false; skipping real publish");
+    return;
+  }
 
   if (publication.provider === "UPLOAD_POST" && publication.status === "SCHEDULED" && publication.providerPublicationId) {
     await syncUploadPostPublicationStatus(publication.workspaceId, publicationId);
@@ -493,6 +501,10 @@ export async function cancelPublication(workspaceId: string, publicationId: stri
 }
 
 export async function enqueueDueScheduledPublications() {
+  if (!socialPublishAllowed()) {
+    logger.info("ALLOW_SOCIAL_PUBLISH=false; skipping scheduled publication enqueue");
+    return 0;
+  }
   const due = await prisma.socialPublication.findMany({
     where: { status: "SCHEDULED", mock: false, scheduledFor: { lte: new Date() }, provider: { not: "UPLOAD_POST" } },
     take: 10,
@@ -504,6 +516,10 @@ export async function enqueueDueScheduledPublications() {
 }
 
 export async function runEnabledAutopilotRules(workspaceId: string) {
+  if (!socialPublishAllowed()) {
+    logger.info({ workspaceId }, "ALLOW_SOCIAL_PUBLISH=false; skipping autopilot");
+    return 0;
+  }
   const rules = await prisma.autopilotRule.findMany({
     where: { workspaceId, enabled: true, consentGiven: true },
   });

@@ -4,9 +4,32 @@ export function envPresent(name: string) {
   return Boolean(process.env[name]?.trim());
 }
 
-export function envTruthy(name: string) {
-  const value = process.env[name]?.trim().toLowerCase();
+export function envTruthy(name: string, source: NodeJS.ProcessEnv = process.env) {
+  const value = source[name]?.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+/** Explicit true/false from env, or undefined when unset. */
+export function envFlag(name: string, source: NodeJS.ProcessEnv = process.env): boolean | undefined {
+  const value = source[name]?.trim().toLowerCase();
+  if (!value) return undefined;
+  if (["1", "true", "yes", "on"].includes(value)) return true;
+  if (["0", "false", "no", "off"].includes(value)) return false;
+  return undefined;
+}
+
+export function envFlagOrDefault(name: string, fallback: boolean, source: NodeJS.ProcessEnv = process.env) {
+  return envFlag(name, source) ?? fallback;
+}
+
+/** Production defaults to false so OpenAI is not called until explicitly enabled. Dev/test default true. */
+export function externalAiProcessingAllowed(source: NodeJS.ProcessEnv = process.env) {
+  return envFlagOrDefault("ALLOW_EXTERNAL_AI_PROCESSING", source.NODE_ENV !== "production", source);
+}
+
+/** Production defaults to false so smoke/recovery cannot publish. Dev/test default true. */
+export function socialPublishAllowed(source: NodeJS.ProcessEnv = process.env) {
+  return envFlagOrDefault("ALLOW_SOCIAL_PUBLISH", source.NODE_ENV !== "production", source);
 }
 
 export function integrationStatus() {

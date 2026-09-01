@@ -1,4 +1,4 @@
-import { envPresent } from "@/lib/env/status";
+import { envPresent, externalAiProcessingAllowed, socialPublishAllowed } from "@/lib/env/status";
 import { isTikTokConfigured, tiktokContentPostingStatus } from "@/lib/social/tiktok/config";
 import { isMetaConfigured, metaPublishingStatus } from "@/lib/social/meta/config";
 import { isXConfigured, xPublishingAllowed } from "@/lib/social/x/config";
@@ -18,14 +18,17 @@ export type FeatureFlag =
 export function featureFlags(): Record<FeatureFlag, boolean> {
   const unified = isUploadPostPrimary() && isUploadPostConfigured();
   return {
-    OPENAI_REAL: envPresent("OPENAI_API_KEY"),
-    TIKTOK_PUBLISHING: unified || (isTikTokConfigured() && tiktokContentPostingStatus() === "AVAILABLE"),
+    OPENAI_REAL: envPresent("OPENAI_API_KEY") && externalAiProcessingAllowed(),
+    TIKTOK_PUBLISHING:
+      socialPublishAllowed() && (unified || (isTikTokConfigured() && tiktokContentPostingStatus() === "AVAILABLE")),
     META_PUBLISHING:
-      unified ||
-      (isMetaConfigured() &&
-        (metaPublishingStatus("instagram") === "AVAILABLE" || metaPublishingStatus("facebook") === "AVAILABLE")),
-    X_PUBLISHING: unified || (isXConfigured() && xPublishingAllowed()),
-    YOUTUBE_PUBLISHING: unified || (isYouTubeConfigured() && youtubeUploadStatus() === "AVAILABLE"),
+      socialPublishAllowed() &&
+      (unified ||
+        (isMetaConfigured() &&
+          (metaPublishingStatus("instagram") === "AVAILABLE" || metaPublishingStatus("facebook") === "AVAILABLE"))),
+    X_PUBLISHING: socialPublishAllowed() && (unified || (isXConfigured() && xPublishingAllowed())),
+    YOUTUBE_PUBLISHING:
+      socialPublishAllowed() && (unified || (isYouTubeConfigured() && youtubeUploadStatus() === "AVAILABLE")),
     STRIPE_BILLING: isStripeTestReady(),
   };
 }

@@ -1,3 +1,5 @@
+import { externalAiProcessingAllowed } from "@/lib/env/status";
+
 export class AiConfigurationError extends Error {
   constructor(message: string) {
     super(message);
@@ -5,12 +7,16 @@ export class AiConfigurationError extends Error {
   }
 }
 
+export const EXTERNAL_AI_BLOCKED_MESSAGE =
+  "ALLOW_EXTERNAL_AI_PROCESSING=false. Upload e infraestrutura podem ser testados; nenhuma chamada OpenAI será feita.";
+
 export function openaiApiKey() {
   return process.env.OPENAI_API_KEY?.trim() ?? "";
 }
 
-/** Real AI when a server-side key exists. Dev/test may fall back to labeled MOCK. Production never silently mocks. */
+/** Real AI when allowed and a server-side key exists. Production never silently mocks when AI is enabled. */
 export function resolveAiMode(source: NodeJS.ProcessEnv = process.env): "real" | "mock" {
+  if (!externalAiProcessingAllowed(source)) return "mock";
   if (source.OPENAI_API_KEY?.trim()) return "real";
   if (source.NODE_ENV === "production") {
     throw new AiConfigurationError("OPENAI_API_KEY ausente em produção. Transcrição e análise reais são obrigatórias.");

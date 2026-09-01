@@ -258,8 +258,27 @@ describe("real/mock separation", () => {
     expect(normalizeExecutionBadge("pending")).toBe("PENDING");
   });
 
-  it("fails closed in production without a key", () => {
-    expect(() => resolveAiMode({ NODE_ENV: "production" } as NodeJS.ProcessEnv)).toThrow(AiConfigurationError);
+  it("blocks OpenAI when ALLOW_EXTERNAL_AI_PROCESSING is false even with a key", () => {
+    expect(
+      resolveAiMode({
+        NODE_ENV: "production",
+        OPENAI_API_KEY: "sk-test",
+        ALLOW_EXTERNAL_AI_PROCESSING: "false",
+      } as NodeJS.ProcessEnv),
+    ).toBe("mock");
+  });
+
+  it("fails closed in production when AI is enabled without a key", () => {
+    expect(() =>
+      resolveAiMode({
+        NODE_ENV: "production",
+        ALLOW_EXTERNAL_AI_PROCESSING: "true",
+      } as NodeJS.ProcessEnv),
+    ).toThrow(AiConfigurationError);
+  });
+
+  it("defaults production AI off so missing keys do not throw until explicitly enabled", () => {
+    expect(resolveAiMode({ NODE_ENV: "production" } as NodeJS.ProcessEnv)).toBe("mock");
   });
 });
 
