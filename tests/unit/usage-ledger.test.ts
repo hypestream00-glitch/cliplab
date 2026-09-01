@@ -11,10 +11,17 @@ vi.mock("@/lib/db/prisma", () => ({
       upsert: (...args: unknown[]) => upsert(...args),
       findUnique: (...args: unknown[]) => findUnique(...args),
       aggregate: (...args: unknown[]) => aggregate(...args),
+      create: async () => ({}),
+      update: async () => ({}),
     },
     subscription: { findUnique: (...args: unknown[]) => findUnique(...args) },
     socialAccount: { count: (...args: unknown[]) => count(...args) },
     workspaceGrant: { findMany: async () => [] },
+    minuteGrant: {
+      aggregate: async () => ({ _sum: { remaining: 0 } }),
+      findMany: async () => [],
+      update: async () => ({}),
+    },
   },
 }));
 
@@ -28,6 +35,8 @@ describe("usage ledger", () => {
 
   it("does not duplicate processing usage on retry", async () => {
     upsert.mockResolvedValue({ id: "evt1", amountSeconds: 34 });
+    findUnique.mockResolvedValue(null);
+    aggregate.mockResolvedValue({ _sum: { amountSeconds: 34 } });
     const { recordProcessingUsage } = await import("@/lib/billing/usage");
     await recordProcessingUsage({ workspaceId: "ws_a", projectId: "proj-renato", durationMs: 33500 });
     await recordProcessingUsage({ workspaceId: "ws_a", projectId: "proj-renato", durationMs: 33500 });

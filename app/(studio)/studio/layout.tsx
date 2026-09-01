@@ -62,7 +62,8 @@ export default async function StudioLayout({ children }: LayoutChildrenProps) {
         url: appPathUrl(`/r/${referralProfile.code}`),
         invited: stats.invited,
         converted: stats.converted,
-        rewardDays: stats.rewardDays,
+        availableCents: stats.availableCents,
+        pendingCents: stats.pendingCents,
       }}
       notifications={visibleNotifications}
     >

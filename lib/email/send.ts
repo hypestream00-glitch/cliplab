@@ -1,6 +1,8 @@
 import { enqueueEmail } from "@/lib/email/outbox";
 import { isEmailConfigured } from "@/lib/email/config";
 import { emailTemplate, type EmailTemplateId, type EmailTemplateVars } from "@/lib/email/templates";
+import { appPathUrl } from "@/lib/email/app-url";
+import { formatBrlFromCents } from "@/lib/referral/config";
 
 export type SendEmailResult =
   | { ok: true; id: EmailTemplateId; delivered: boolean; duplicate: boolean; queued: boolean; outboxId: string | null }
@@ -174,8 +176,65 @@ export async function sendReferralRewardEmail(params: {
     to: params.to,
     template: "referral-reward",
     userId: params.userId,
-    vars: { name: params.name ?? undefined, actionUrl: undefined },
+    vars: { name: params.name ?? undefined, actionUrl: appPathUrl("/studio/referrals") },
     idempotencyKey: `referral-reward:${params.rewardId}`,
     flush: false,
   });
+}
+
+function sendWithdrawalEmail(params: {
+  to: string;
+  userId: string;
+  name?: string | null;
+  amountCents: number;
+  template: "withdrawal-approved" | "withdrawal-paid" | "withdrawal-rejected";
+  reason?: string;
+  withdrawalId: string;
+}) {
+  return sendTemplatedEmail({
+    to: params.to,
+    template: params.template,
+    userId: params.userId,
+    vars: {
+      name: params.name ?? undefined,
+      actionUrl: appPathUrl("/studio/referrals"),
+      amountLabel: formatBrlFromCents(params.amountCents),
+      reason: params.reason,
+    },
+    idempotencyKey: `${params.template}:${params.withdrawalId}`,
+    flush: false,
+  });
+}
+
+export async function sendWithdrawalApprovedEmail(params: {
+  to: string;
+  userId: string;
+  name?: string | null;
+  amountCents: number;
+  withdrawalId: string;
+  reason?: string;
+}) {
+  return sendWithdrawalEmail({ ...params, template: "withdrawal-approved" });
+}
+
+export async function sendWithdrawalPaidEmail(params: {
+  to: string;
+  userId: string;
+  name?: string | null;
+  amountCents: number;
+  withdrawalId: string;
+  reason?: string;
+}) {
+  return sendWithdrawalEmail({ ...params, template: "withdrawal-paid" });
+}
+
+export async function sendWithdrawalRejectedEmail(params: {
+  to: string;
+  userId: string;
+  name?: string | null;
+  amountCents: number;
+  withdrawalId: string;
+  reason?: string;
+}) {
+  return sendWithdrawalEmail({ ...params, template: "withdrawal-rejected" });
 }

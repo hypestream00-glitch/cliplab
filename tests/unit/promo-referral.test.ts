@@ -23,7 +23,18 @@ const promoCodes = new Map<string, { id: string; code: string; active: boolean; 
 const redemptions: Array<{ promoCodeId: string; userId: string; workspaceId: string; grantId: string }> = [];
 const profiles = new Map<string, { userId: string; code: string }>();
 const attributions = new Map<string, { id: string; referrerUserId: string; referredUserId: string; code: string; convertedAt: Date | null }>();
-const rewards = new Map<string, { id: string; attributionId: string; stripeEventId: string | null; days: number; referrerUserId: string }>();
+const rewards = new Map<string, {
+  id: string;
+  attributionId: string;
+  stripeEventId: string | null;
+  days: number;
+  cashAmountCents: number;
+  aiMinutes: number;
+  referrerUserId: string;
+  status: string;
+}>();
+const ledger: Array<{ userId: string; type: string; amountCents: number; balanceKind: string; idempotencyKey: string }> = [];
+const minuteGrants: Array<{ sourceKey: string; seconds: number; remaining: number }> = [];
 const users = new Map<string, { id: string; email: string; name: string }>();
 const members: Array<{ userId: string; workspaceId: string; role: string; createdAt: Date }> = [];
 
@@ -39,6 +50,8 @@ promoCodes.set("MUGAO12", {
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
+    $transaction: async (fn: (tx: unknown) => unknown) => fn((await import("@/lib/db/prisma")).prisma),
+    $executeRaw: async () => 1,
     workspaceGrant: {
       findMany: async ({ where }: { where: { workspaceId: string; endsAt?: { gt: Date }; planCode?: string } }) => {
         return grants.filter((row) => {
@@ -121,16 +134,41 @@ vi.mock("@/lib/db/prisma", () => ({
         if ([...rewards.values()].some((row) => row.attributionId === data.attributionId || (data.stripeEventId && row.stripeEventId === data.stripeEventId))) {
           throw { code: "P2002" };
         }
-        const row = { id: data.id ?? `rew_${rewards.size + 1}`, ...data };
+        const row = { id: data.id ?? `rew_${rewards.size + 1}`, cashAmountCents: 0, aiMinutes: 0, status: "PENDING", ...data };
         rewards.set(row.id, row);
         return row;
       },
+      count: async ({ where }: { where: { referrerUserId: string } }) =>
+        [...rewards.values()].filter((row) => row.referrerUserId === where.referrerUserId).length,
       aggregate: async ({ where }: { where: { referrerUserId: string } }) => ({
         _sum: {
           days: [...rewards.values()].filter((row) => row.referrerUserId === where.referrerUserId).reduce((sum, row) => sum + row.days, 0),
         },
       }),
     },
+    walletLedgerEntry: {
+      create: async ({ data }: { data: { userId: string; type: string; amountCents: number; balanceKind: string; idempotencyKey: string } }) => {
+        if (ledger.some((row) => row.idempotencyKey === data.idempotencyKey)) throw { code: "P2002" };
+        ledger.push(data);
+        return data;
+      },
+      aggregate: async ({ where }: { where: { userId: string; balanceKind: string } }) => ({
+        _sum: {
+          amountCents: ledger
+            .filter((row) => row.userId === where.userId && row.balanceKind === where.balanceKind)
+            .reduce((sum, row) => sum + row.amountCents, 0),
+        },
+      }),
+    },
+    minuteGrant: {
+      create: async ({ data }: { data: { sourceKey: string; seconds: number; remaining: number } }) => {
+        if (minuteGrants.some((row) => row.sourceKey === data.sourceKey)) throw { code: "P2002" };
+        minuteGrants.push(data);
+        return data;
+      },
+    },
+    auditLog: { create: async () => ({}) },
+    affiliateFlag: { create: async () => ({}), count: async () => 0 },
     workspaceMember: {
       findFirst: async ({ where }: { where: { workspaceId?: string; userId?: string; role: string } }) => {
         const row = members.find((item) => {
@@ -200,6 +238,8 @@ describe("referral", () => {
     profiles.clear();
     attributions.clear();
     rewards.clear();
+    ledger.length = 0;
+    minuteGrants.length = 0;
     users.clear();
     members.length = 0;
   });
@@ -221,7 +261,7 @@ describe("referral", () => {
     expect(dup.reason).toBe("duplicate");
   });
 
-  it("rewards +7 Pro only on the first paid conversion and ignores webhook replay", async () => {
+  it("rewards R$5 and 30 AI minutes only on the first paid conversion and ignores webhook replay", async () => {
     const { ensureReferralProfile } = await import("@/lib/referral/profile");
     const { attributeReferral } = await import("@/lib/referral/attribute");
     const { maybeGrantReferralReward } = await import("@/lib/referral/reward");
@@ -240,7 +280,11 @@ describe("referral", () => {
       planCode: "CREATOR",
     });
     expect(first.ok).toBe(true);
-    if (first.ok) expect(first.days).toBe(7);
+    if (first.ok) {
+      expect(first.cashAmountCents).toBe(500);
+      expect(first.aiMinutes).toBe(30);
+      expect(first.duplicate).toBeFalsy();
+    }
     const replay = await maybeGrantReferralReward({
       referredWorkspaceId: "ws_friend",
       stripeEventId: "evt_1",
@@ -256,7 +300,9 @@ describe("referral", () => {
     });
     expect(secondCharge).toMatchObject({ ok: true, duplicate: true });
     expect(rewards.size).toBe(1);
-    expect(grants[0]?.planCode).toBe("PRO");
+    expect(grants).toHaveLength(0);
+    expect(minuteGrants).toHaveLength(1);
+    expect(ledger.some((row) => row.type === "REFERRAL_PENDING" && row.amountCents === 500)).toBe(true);
   });
 
   it("does not reward unpaid or trial invoices", async () => {
@@ -295,7 +341,10 @@ describe("visual and public copy", () => {
     const referral = readFileSync(path.join(root, "components/layout/referral-button.tsx"), "utf8");
     expect(referral).toContain("Indique e ganhe");
     expect(referral).toContain("Copiar meu link");
-    expect(referral).toContain("Ganhe Pro indicando amigos");
+    expect(referral).toContain("Indique amigos e ganhe dinheiro");
+    expect(referral).toContain("Copiar meu link");
+    expect(referral).toContain("Ver minha carteira");
+    expect(referral).not.toContain("Ganhe Pro indicando amigos");
     const createPage = readFileSync(path.join(root, "app/(studio)/studio/create/page.tsx"), "utf8");
     expect(createPage).toMatch(/Criar clips com[\s\S]*IA/);
     expect(createPage).toContain("Envie um vídeo e deixe a IA encontrar os melhores momentos.");
@@ -318,7 +367,8 @@ describe("visual and public copy", () => {
 
   it("renders referral reward email without CLIPLAB", () => {
     const mail = renderEmailTemplate("referral-reward", { name: "Ana" });
-    expect(mail.subject).toMatch(/7 dias de Pro/);
+    expect(mail.subject).toMatch(/R\$5/);
+    expect(mail.text).toContain("30 minutos");
     expect(mail.html).toContain("CortaClip");
     expect(mail.text).toContain("https://cortaclip.com");
     expect(`${mail.subject}${mail.html}${mail.text}`).not.toContain("CLIPLAB");

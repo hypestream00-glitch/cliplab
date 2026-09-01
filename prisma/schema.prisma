@@ -262,6 +262,11 @@ model User {
   referredBy         ReferralAttribution?  @relation("Referred")
   referralRewards    ReferralReward[]      @relation("ReferralRewardReferrer")
   workspaceGrants    WorkspaceGrant[]
+  walletLedger       WalletLedgerEntry[]
+  withdrawals        Withdrawal[]
+  affiliateFlags     AffiliateFlag[]
+  minuteGrants       MinuteGrant[]
+  referralClicks     ReferralClick[]
 
   @@index([createdAt])
   @@index([role])
@@ -380,6 +385,7 @@ model Workspace {
   promoRedemptions   PromoRedemption[]
   grants             WorkspaceGrant[]
   referralRewards    ReferralReward[]
+  minuteGrants       MinuteGrant[]
   competitionParticipants CompetitionParticipant[]
   competitionSubmissions CompetitionSubmission[]
 
@@ -1380,25 +1386,132 @@ model ReferralAttribution {
 }
 
 model ReferralReward {
-  id               String   @id @default(cuid())
-  attributionId    String   @unique
-  referrerUserId   String
-  referredUserId   String
-  workspaceId      String
-  grantId          String   @unique
-  stripeEventId    String?  @unique
-  stripeInvoiceId  String?
-  days             Int      @default(7)
-  status           String   @default("GRANTED")
-  createdAt        DateTime @default(now())
+  id                   String    @id @default(cuid())
+  attributionId        String    @unique
+  referrerUserId       String
+  referredUserId       String
+  workspaceId          String
+  grantId              String?   @unique
+  stripeEventId        String?   @unique
+  stripeInvoiceId      String?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  days                 Int       @default(0)
+  cashAmountCents      Int       @default(0)
+  aiMinutes            Int       @default(0)
+  rewardType           String    @default("FIRST_PAID_SUBSCRIPTION")
+  status               String    @default("PENDING")
+  reviewStatus         String    @default("NORMAL")
+  availableAt          DateTime?
+  cancelledAt          DateTime?
+  metadata             Json?
+  createdAt            DateTime  @default(now())
 
   attribution ReferralAttribution @relation(fields: [attributionId], references: [id], onDelete: Cascade)
   referrer    User                @relation("ReferralRewardReferrer", fields: [referrerUserId], references: [id], onDelete: Cascade)
   workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  grant       WorkspaceGrant      @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  grant       WorkspaceGrant?     @relation(fields: [grantId], references: [id], onDelete: SetNull)
+  ledger      WalletLedgerEntry[]
 
-  @@index([referrerUserId])
+  @@index([referrerUserId, status])
   @@index([workspaceId])
+  @@index([status, availableAt])
+}
+
+model WalletLedgerEntry {
+  id               String   @id @default(cuid())
+  userId           String
+  type             String
+  amountCents      Int
+  balanceKind      String
+  idempotencyKey   String   @unique
+  referralRewardId String?
+  withdrawalId     String?
+  reason           String?
+  metadata         Json?
+  createdAt        DateTime @default(now())
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward   ReferralReward? @relation(fields: [referralRewardId], references: [id], onDelete: SetNull)
+  withdrawal Withdrawal?   @relation(fields: [withdrawalId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([userId, balanceKind])
+}
+
+model Withdrawal {
+  id                   String    @id @default(cuid())
+  userId               String
+  amountCents          Int
+  status               String    @default("REQUESTED")
+  pixKeyType           String
+  pixKeyFingerprint    String
+  pixKeyCipher         String
+  pixKeyMasked         String
+  holderName           String
+  holderDocumentMasked String?
+  requestedAt          DateTime  @default(now())
+  approvedAt           DateTime?
+  paidAt               DateTime?
+  rejectedAt           DateTime?
+  cancelledAt          DateTime?
+  rejectionReason      String?
+  adminNote            String?
+  paymentReference     String?
+  approvedById         String?
+  paidById             String?
+  rejectedById         String?
+
+  user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledger WalletLedgerEntry[]
+
+  @@index([userId, status])
+  @@index([status, requestedAt])
+}
+
+model MinuteGrant {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String?
+  source      String
+  sourceKey   String    @unique
+  seconds     Int
+  remaining   Int
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, revokedAt])
+}
+
+model ReferralClick {
+  id             String   @id @default(cuid())
+  code           String
+  referrerUserId String?
+  ipHash         String?
+  userAgentHash  String?
+  createdAt      DateTime @default(now())
+
+  referrer User? @relation(fields: [referrerUserId], references: [id], onDelete: SetNull)
+
+  @@index([code, createdAt])
+  @@index([referrerUserId])
+}
+
+model AffiliateFlag {
+  id         String    @id @default(cuid())
+  userId     String
+  status     String    @default("REVIEW")
+  reason     String
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
 }
 
 enum CompetitionStatus {

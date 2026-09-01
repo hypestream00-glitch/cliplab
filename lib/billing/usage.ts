@@ -8,6 +8,7 @@ import {
 import { effectivePlanCode } from "@/lib/billing/stripe-status";
 import { listActiveGrants } from "@/lib/billing/grants";
 import { mergePlanWithGrants, pickActiveGrant, remainingGrantDays } from "@/lib/billing/plan-rank";
+import { extraMinuteSeconds, syncMinuteGrantConsumption } from "@/lib/referral/minutes";
 
 export { PlanLimitError, secondsFromDurationMs, minutesFromSeconds, formatMinutesUsed, processingIdempotencyKey } from "@/lib/billing/usage-math";
 
@@ -55,11 +56,22 @@ export async function getMonthlyUsage(workspaceId: string) {
     _sum: { amountSeconds: true },
   });
   const usedSeconds = used._sum.amountSeconds ?? 0;
-  const limitSeconds = limits.monthlyMinutes * 60;
+  const planLimitSeconds = limits.monthlyMinutes * 60;
+  await syncMinuteGrantConsumption({
+    workspaceId,
+    usedSeconds,
+    planLimitSeconds,
+    periodStart: start,
+  });
+  const extraSeconds = await extraMinuteSeconds(workspaceId);
+  const planRemaining = Math.max(0, planLimitSeconds - usedSeconds);
+  const remainingSeconds = planRemaining + extraSeconds;
+  const limitSeconds = usedSeconds + remainingSeconds;
   return {
     usedSeconds,
     limitSeconds,
-    remainingSeconds: Math.max(0, limitSeconds - usedSeconds),
+    remainingSeconds,
+    extraSeconds,
     limits,
     periodStart: start,
     periodEnd: subscription?.currentPeriodEnd ?? activeGrant?.endsAt ?? null,
@@ -115,6 +127,13 @@ export async function recordProcessingUsage(params: {
       idempotencyKey: processingIdempotencyKey(params.projectId),
     },
     update: {},
+  });
+  const usage = await getMonthlyUsage(params.workspaceId);
+  await syncMinuteGrantConsumption({
+    workspaceId: params.workspaceId,
+    usedSeconds: usage.usedSeconds,
+    planLimitSeconds: usage.limits.monthlyMinutes * 60,
+    periodStart: usage.periodStart,
   });
   return amountSeconds;
 }

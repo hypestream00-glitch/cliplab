@@ -57,6 +57,8 @@ export async function enqueueEmail(input: EnqueueEmailInput) {
   if (varsWithUrl.planName) payload.planName = varsWithUrl.planName;
   if (varsWithUrl.periodEnd) payload.periodEnd = varsWithUrl.periodEnd;
   if (varsWithUrl.actionUrl) payload.actionUrl = varsWithUrl.actionUrl;
+  if (varsWithUrl.amountLabel) payload.amountLabel = varsWithUrl.amountLabel;
+  if (varsWithUrl.reason) payload.reason = varsWithUrl.reason;
   if (input.rawToken) {
     try {
       payload.tokenCipher = encryptSecret(input.rawToken);
@@ -142,6 +144,8 @@ export async function flushEmail(id: string) {
     planName: payload.planName,
     periodEnd: payload.periodEnd,
     actionUrl: payload.actionUrl,
+    amountLabel: payload.amountLabel,
+    reason: payload.reason,
   };
   const rendered = renderEmailTemplate(row.type as EmailTemplateId, withActionUrl(row.type as EmailTemplateId, vars, rawToken));
   const result = await sendEmail({

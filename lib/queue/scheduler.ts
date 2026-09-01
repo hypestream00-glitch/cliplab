@@ -5,6 +5,7 @@ import { beatWorker } from "@/lib/queue/heartbeat";
 import { cleanupExpiredUploads } from "@/lib/uploads/session";
 import { socialPublishAllowed } from "@/lib/env/status";
 import { WORKER_SCHEDULER_INTERVAL_MS } from "@/lib/queue/consumers";
+import { releaseDueReferralRewards } from "@/lib/referral/release";
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let lastAnalyticsAt = 0;
@@ -39,6 +40,9 @@ export async function runWorkerSchedulerTick() {
   });
   await recoverPersistedJobs().catch((error) => logger.warn({ err: error }, "job recovery skipped"));
   await cleanupExpiredUploads().catch(() => undefined);
+  await releaseDueReferralRewards().catch((error) => {
+    logger.warn({ errType: error instanceof Error ? error.name : "Error" }, "affiliate reward release skipped");
+  });
   await maybeSyncAnalyticsInProcess();
   if (socialPublishAllowed()) {
     const { enqueueDueScheduledPublications } = await import("@/lib/services/publishing");

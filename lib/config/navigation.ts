@@ -21,6 +21,8 @@ import {
   KeyRound,
   Plus,
   Flame,
+  Gift,
+  Banknote,
 } from "lucide-react";
 
 export type NavItem = {
@@ -58,6 +60,7 @@ export const studioNavGroups: NavGroup[] = [
     id: "insights",
     items: [
       { href: "/studio/analytics", label: "Analytics", icon: BarChart3 },
+      { href: "/studio/referrals", label: "Indique e ganhe", icon: Gift },
       { href: "/studio/settings/billing", label: "Plano e uso", icon: Coins },
     ],
   },
@@ -115,4 +118,6 @@ export const adminNav: NavItem[] = [
   { href: "/admin/competitions", label: "Campeonatos", icon: Trophy },
   { href: "/admin/trending", label: "Em alta", icon: Flame },
   { href: "/admin/billing", label: "Billing", icon: BarChart3 },
+  { href: "/admin/affiliates", label: "Afiliados", icon: Gift },
+  { href: "/admin/affiliates/withdrawals", label: "Saques", icon: Banknote },
 ];

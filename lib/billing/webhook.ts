@@ -10,6 +10,7 @@ import { gracePeriodEndsAt } from "@/lib/billing/policy";
 import { subscriptionPriceId } from "@/lib/billing/stripe-client";
 import { productPlanCode } from "@/lib/config/plans";
 import { maybeGrantReferralReward } from "@/lib/referral/reward";
+import { maybeCancelReferralOnRefund } from "@/lib/referral/refund";
 import {
   notifyPaymentFailed,
   notifySubscriptionActivated,
@@ -28,6 +29,8 @@ const HANDLED = new Set([
   "customer.subscription.deleted",
   "invoice.paid",
   "invoice.payment_failed",
+  "charge.refunded",
+  "charge.dispute.created",
 ]);
 
 export async function handleStripeWebhook(params: {
@@ -100,14 +103,6 @@ async function dispatchStripeEvent(stripe: Stripe, event: Stripe.Event) {
       const planCode = applied.planCode;
       if (event.type === "customer.subscription.created") {
         await notifySubscriptionActivated({ workspaceId: applied.workspaceId, subscription, planCode });
-        if (subscription.status === "active") {
-          await maybeGrantReferralReward({
-            referredWorkspaceId: applied.workspaceId,
-            stripeEventId: event.id,
-            paidAmount: 1,
-            planCode,
-          });
-        }
         return;
       }
       if (event.type === "customer.subscription.deleted") {
@@ -156,6 +151,18 @@ async function dispatchStripeEvent(stripe: Stripe, event: Stripe.Event) {
       }
       return;
     }
+    case "charge.refunded":
+    case "charge.dispute.created": {
+      const charge = event.data.object as Stripe.Charge & { invoice?: string | { id?: string } | null };
+      const customerId = typeof charge.customer === "string" ? charge.customer : charge.customer?.id;
+      const invoiceId = typeof charge.invoice === "string" ? charge.invoice : charge.invoice?.id;
+      await maybeCancelReferralOnRefund({
+        stripeEventId: event.id,
+        stripeCustomerId: customerId,
+        stripeInvoiceId: invoiceId ?? null,
+      });
+      return;
+    }
     default:
       return;
   }
@@ -176,6 +183,8 @@ async function maybeRewardFromInvoice(invoice: Stripe.Invoice, eventId: string) 
     referredWorkspaceId: existing.workspaceId,
     stripeEventId: eventId,
     stripeInvoiceId: invoice.id,
+    stripeCustomerId: customerId,
+    stripeSubscriptionId: subscriptionId,
     paidAmount: paid,
     planCode: existing.plan.code,
   });

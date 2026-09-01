@@ -151,6 +151,7 @@ describe("stripe webhook", () => {
     const result = await handleStripeWebhook({ rawBody: "{}", signature: "sig", ip: "10.0.0.4" });
     expect(result.ok).toBe(true);
     expect(upsertSub).toHaveBeenCalled();
+    expect(maybeGrantReferralReward).not.toHaveBeenCalled();
     const update = upsertSub.mock.calls[0][0];
     expect(update.where).toEqual({ workspaceId: "ws_a" });
     expect(update.update.status).toBe("ACTIVE");

@@ -1,17 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { formatBrlFromCents } from "@/lib/referral/config";
 
 export type ReferralModalProps = {
   url: string;
   invited: number;
   converted: number;
-  rewardDays: number;
+  availableCents: number;
+  pendingCents: number;
 };
 
-export function ReferralButton({ url, invited, converted, rewardDays }: ReferralModalProps) {
+export function ReferralButton({ url, invited, converted, availableCents, pendingCents }: ReferralModalProps) {
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(url);
@@ -34,13 +37,23 @@ export function ReferralButton({ url, invited, converted, rewardDays }: Referral
           <span className="hidden sm:inline">Indique e ganhe</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>🎁 Ganhe Pro indicando amigos</DialogTitle>
+          <DialogTitle>🎁 Indique amigos e ganhe dinheiro</DialogTitle>
           <DialogDescription>
-            Compartilhe seu link exclusivo. Quando um amigo fizer a primeira assinatura paga, você recebe 7 dias de Pro grátis. O amigo pode usar os cupons disponíveis no CortaClip normalmente.
+            Compartilhe seu link exclusivo. Quando um amigo fizer a primeira assinatura paga, você recebe R$5 de saldo sacável e +30 minutos de IA. O amigo pode usar promoções e cupons normalmente.
           </DialogDescription>
         </DialogHeader>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-3">
+            <p className="text-[20px] font-semibold text-yellow-300">💰 R$5</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">Saldo sacável</p>
+          </div>
+          <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-3">
+            <p className="text-[20px] font-semibold text-violet-200">⚡ +30 min</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">Processamento com IA</p>
+          </div>
+        </div>
         <div>
           <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">Seu link</p>
           <p className="mt-1 break-all rounded-md border bg-muted/40 px-2 py-2 font-mono text-[12px]">{url}</p>
@@ -48,7 +61,7 @@ export function ReferralButton({ url, invited, converted, rewardDays }: Referral
             Copiar meu link
           </Button>
         </div>
-        <dl className="grid grid-cols-3 gap-2 text-center">
+        <dl className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
           <div className="rounded-lg border bg-card px-2 py-2">
             <dt className="text-[10px] text-muted-foreground">Amigos indicados</dt>
             <dd className="mt-1 text-[16px] font-semibold">{invited}</dd>
@@ -58,10 +71,17 @@ export function ReferralButton({ url, invited, converted, rewardDays }: Referral
             <dd className="mt-1 text-[16px] font-semibold">{converted}</dd>
           </div>
           <div className="rounded-lg border bg-card px-2 py-2">
-            <dt className="text-[10px] text-muted-foreground">Recompensas recebidas</dt>
-            <dd className="mt-1 text-[16px] font-semibold">{rewardDays} dias</dd>
+            <dt className="text-[10px] text-muted-foreground">Saldo disponível</dt>
+            <dd className="mt-1 text-[16px] font-semibold">{formatBrlFromCents(availableCents)}</dd>
+          </div>
+          <div className="rounded-lg border bg-card px-2 py-2">
+            <dt className="text-[10px] text-muted-foreground">Saldo pendente</dt>
+            <dd className="mt-1 text-[16px] font-semibold">{formatBrlFromCents(pendingCents)}</dd>
           </div>
         </dl>
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/studio/referrals">Ver minha carteira</Link>
+        </Button>
       </DialogContent>
     </Dialog>
   );

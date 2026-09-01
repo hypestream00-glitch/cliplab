@@ -12,13 +12,18 @@ export type EmailTemplateId =
   | "payment-failed"
   | "processing-complete"
   | "processing-failed"
-  | "referral-reward";
+  | "referral-reward"
+  | "withdrawal-approved"
+  | "withdrawal-paid"
+  | "withdrawal-rejected";
 
 export type EmailTemplateVars = {
   name?: string;
   actionUrl?: string;
   planName?: string;
   periodEnd?: string;
+  amountLabel?: string;
+  reason?: string;
 };
 
 export type RenderedEmail = {
@@ -182,14 +187,54 @@ export function renderEmailTemplate(id: EmailTemplateId, vars: EmailTemplateVars
       return { id, subject, html, text };
     }
     case "referral-reward": {
-      const ctaUrl = vars.actionUrl ?? brand.url;
-      const subject = `Você ganhou 7 dias de Pro no ${brand.name} 🎉`;
-      const text = `${hello},\n\nUma pessoa indicada por você realizou a primeira assinatura.\nVocê recebeu +7 dias de ${brand.name} Pro.\n${ctaUrl}`;
+      const ctaUrl = vars.actionUrl ?? `${brand.url}/studio/referrals`;
+      const subject = `Você ganhou R$5 no ${brand.name} 🎉`;
+      const text = `${hello},\n\nUma pessoa indicada por você assinou o ${brand.name}.\nVocê recebeu:\nR$5 de saldo\n+30 minutos de IA\n\nO saldo ficará disponível para saque após o período de validação.\n${ctaUrl}`;
       const html = layout(
-        `Você ganhou 7 dias de Pro`,
-        `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">Uma pessoa indicada por você realizou a primeira assinatura. Você recebeu <strong style="color:#fff">+7 dias de ${escapeHtml(brand.name)} Pro</strong>.</p>`,
+        `Você ganhou R$5 no ${brand.name}`,
+        `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">Uma pessoa indicada por você assinou o ${escapeHtml(brand.name)}. Você recebeu <strong style="color:#fbbf24">R$5 de saldo</strong> e <strong style="color:#fff">+30 minutos de IA</strong>. O saldo ficará disponível para saque após o período de validação.</p>`,
         text,
-        { label: `Acessar ${brand.name}`, href: ctaUrl },
+        { label: "Ver minha carteira", href: ctaUrl },
+      );
+      return { id, subject, html, text };
+    }
+    case "withdrawal-approved": {
+      const ctaUrl = vars.actionUrl ?? `${brand.url}/studio/referrals`;
+      const amount = vars.amountLabel ?? "seu saque";
+      const subject = `Seu saque do ${brand.name} foi aprovado`;
+      const text = `${hello},\n\nSeu saque de ${amount} foi aprovado e será pago manualmente em breve.\n${ctaUrl}`;
+      const html = layout(
+        "Saque aprovado",
+        `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">Seu saque de <strong style="color:#fff">${escapeHtml(amount)}</strong> foi aprovado. O pagamento PIX será feito manualmente fora da plataforma.</p>`,
+        text,
+        { label: "Ver carteira", href: ctaUrl },
+      );
+      return { id, subject, html, text };
+    }
+    case "withdrawal-paid": {
+      const ctaUrl = vars.actionUrl ?? `${brand.url}/studio/referrals`;
+      const amount = vars.amountLabel ?? "seu saque";
+      const subject = `Seu saque do ${brand.name} foi pago 💸`;
+      const text = `${hello},\n\nSeu saque de ${amount} foi marcado como pago.\n${ctaUrl}`;
+      const html = layout(
+        "Saque pago",
+        `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">Seu saque de <strong style="color:#fbbf24">${escapeHtml(amount)}</strong> foi marcado como pago.</p>`,
+        text,
+        { label: "Ver carteira", href: ctaUrl },
+      );
+      return { id, subject, html, text };
+    }
+    case "withdrawal-rejected": {
+      const ctaUrl = vars.actionUrl ?? `${brand.url}/studio/referrals`;
+      const amount = vars.amountLabel ?? "seu saque";
+      const reason = vars.reason?.trim() || "Os dados do saque precisam de revisão.";
+      const subject = `Seu saque do ${brand.name} foi recusado`;
+      const text = `${hello},\n\nSeu saque de ${amount} foi recusado. O valor voltou para sua carteira.\nMotivo: ${reason}\n${ctaUrl}`;
+      const html = layout(
+        "Saque recusado",
+        `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">Seu saque de <strong style="color:#fff">${escapeHtml(amount)}</strong> foi recusado. O valor voltou para o saldo disponível.</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(reason)}</p>`,
+        text,
+        { label: "Ver carteira", href: ctaUrl },
       );
       return { id, subject, html, text };
     }

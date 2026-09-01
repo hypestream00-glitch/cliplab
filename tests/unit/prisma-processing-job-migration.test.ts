@@ -21,6 +21,10 @@ const competitionsSql = readFileSync(
   path.join(migrationsDir, "20260901220000_competitions_and_trending/migration.sql"),
   "utf8",
 );
+const affiliateSql = readFileSync(
+  path.join(migrationsDir, "20260901230000_affiliate_wallet/migration.sql"),
+  "utf8",
+);
 
 const schemaModels = [...schema.matchAll(/^model (\w+)/gm)].map((match) => match[1]);
 const schemaEnums = [...schema.matchAll(/^enum (\w+)/gm)].map((match) => match[1]);
@@ -44,6 +48,13 @@ const competitionModels = [
   "TrendingItem",
   "TrendingScore",
 ];
+const affiliateModels = [
+  "WalletLedgerEntry",
+  "Withdrawal",
+  "MinuteGrant",
+  "ReferralClick",
+  "AffiliateFlag",
+];
 const additiveEnums = [
   "CompetitionStatus",
   "CompetitionPrizeMode",
@@ -60,7 +71,7 @@ describe("CLIPLAB Prisma schema audit and reconciliation", () => {
     expect(schema).not.toMatch(/@map\(/);
   });
 
-  it("keeps versioned migrations: ProcessingJob, reconciliation, promo/referral, then competitions/trending", () => {
+  it("keeps versioned migrations: ProcessingJob, reconciliation, promo/referral, competitions/trending, then affiliate wallet", async () => {
     const names = readdirSync(migrationsDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
@@ -70,6 +81,7 @@ describe("CLIPLAB Prisma schema audit and reconciliation", () => {
       "20260901050500_reconcile_full_schema",
       "20260901210000_promo_and_referral",
       "20260901220000_competitions_and_trending",
+      "20260901230000_affiliate_wallet",
     ]);
   });
 
@@ -81,6 +93,10 @@ describe("CLIPLAB Prisma schema audit and reconciliation", () => {
       }
       if (competitionModels.includes(model)) {
         expect(competitionsSql).toContain(`CREATE TABLE "${model}"`);
+        continue;
+      }
+      if (affiliateModels.includes(model)) {
+        expect(affiliateSql).toContain(`CREATE TABLE IF NOT EXISTS "${model}"`);
         continue;
       }
       expect(reconcileSql).toContain(`CREATE TABLE IF NOT EXISTS "${model}"`);
@@ -109,7 +125,7 @@ describe("CLIPLAB Prisma schema audit and reconciliation", () => {
   });
 
   it("never drops, truncates, force-resets, or marks migrations applied in SQL", () => {
-    for (const sql of [processingJobSql, reconcileSql, promoSql, competitionsSql]) {
+    for (const sql of [processingJobSql, reconcileSql, promoSql, competitionsSql, affiliateSql]) {
       expect(sql).not.toMatch(/\bDROP TABLE\b/i);
       expect(sql).not.toMatch(/\bDROP COLUMN\b/i);
       expect(sql).not.toMatch(/\bTRUNCATE TABLE\b/i);
@@ -124,6 +140,9 @@ describe("CLIPLAB Prisma schema audit and reconciliation", () => {
     expect(promoSql).toContain("MUGAO12");
     expect(competitionsSql).toContain("CompetitionSubmissionMetric");
     expect(competitionsSql).toContain("ADD VALUE IF NOT EXISTS 'COMPETITION'");
+    expect(affiliateSql).toContain("WalletLedgerEntry");
+    expect(affiliateSql).toContain("ALTER COLUMN \"grantId\" DROP NOT NULL");
+    expect(affiliateSql).not.toMatch(/\bDROP TABLE\b/i);
   });
 
   it("is what worker recovery queries after schema exists", () => {
