@@ -20,6 +20,7 @@ import {
   Users,
   KeyRound,
   Plus,
+  Flame,
 } from "lucide-react";
 
 export type NavItem = {
@@ -40,6 +41,7 @@ export const studioNavGroups: NavGroup[] = [
     id: "main",
     items: [
       { href: "/studio", label: "Dashboard", icon: Home },
+      { href: "/studio/trending", label: "Em alta", icon: Flame },
       { href: "/studio/projects", label: "Projetos", icon: FolderKanban },
       { href: "/studio/clips", label: "Meus clips", icon: Scissors },
       { href: "/studio/create", label: "Criar", icon: Sparkles },
@@ -47,6 +49,10 @@ export const studioNavGroups: NavGroup[] = [
       { href: "/studio/calendar", label: "Calendário", icon: CalendarDays },
       { href: "/studio/accounts", label: "Contas sociais", icon: Share2 },
     ],
+  },
+  {
+    id: "competitions",
+    items: [{ href: "/studio/competitions", label: "Campeonatos", icon: Trophy }],
   },
   {
     id: "insights",
@@ -68,7 +74,6 @@ export const studioMoreItems: NavItem[] = [
   { href: "/studio/publishing/queue", label: "Fila", icon: ListTodo },
   { href: "/studio/publishing/autopilot", label: "Autopilot", icon: Bot },
   { href: "/studio/live", label: "Live", icon: Radio },
-  { href: "/studio/championships", label: "Campeonatos", icon: Trophy },
   { href: "/studio/team", label: "Equipe", icon: Users },
   { href: "/studio/api", label: "API", icon: KeyRound },
 ];
@@ -107,5 +112,7 @@ export const adminNav: NavItem[] = [
   { href: "/admin/users", label: "Usuários", icon: Users },
   { href: "/admin/workspaces", label: "Workspaces", icon: FolderKanban },
   { href: "/admin/jobs", label: "Jobs", icon: Clapperboard },
+  { href: "/admin/competitions", label: "Campeonatos", icon: Trophy },
+  { href: "/admin/trending", label: "Em alta", icon: Flame },
   { href: "/admin/billing", label: "Billing", icon: BarChart3 },
 ];

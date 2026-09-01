@@ -13,12 +13,13 @@ import { getCliplabPublishedViews } from "@/lib/analytics/cliplab-views";
 import { cliplabViewsEmptyHint } from "@/lib/analytics/provenance";
 import { sessionGreetingName } from "@/lib/auth/identity";
 import { formatMinutesUsed, getMonthlyUsage } from "@/lib/billing/usage";
+import { ActiveCompetitionBanner } from "@/components/competitions/active-banner";
 
 export default async function StudioHomePage() {
   const { user, workspace } = await requireWorkspaceContext();
   const projectWhere = { ...visibleProjectWhere(workspace.id), archivedAt: null };
   const clipWhere = visibleClipLibraryWhere(workspace.id);
-  const [projects, clips, publications, projectCount, clipCount, publishedCount, cliplabViews, usage, socialCount] = await Promise.all([
+  const [projects, clips, publications, projectCount, clipCount, publishedCount, cliplabViews, usage, socialCount, featuredCompetition] = await Promise.all([
     prisma.project.findMany({
       where: projectWhere,
       orderBy: { createdAt: "desc" },
@@ -45,6 +46,10 @@ export default async function StudioHomePage() {
     getCliplabPublishedViews(workspace.id),
     getMonthlyUsage(workspace.id),
     prisma.socialAccount.count({ where: { workspaceId: workspace.id, status: "CONNECTED" } }),
+    prisma.competition.findFirst({
+      where: { status: { in: ["ACTIVE", "SCHEDULED"] } },
+      orderBy: { prizePoolCents: "desc" },
+    }),
   ]);
 
   const firstName = sessionGreetingName(user);
@@ -64,6 +69,14 @@ export default async function StudioHomePage() {
           </Button>
         }
       />
+
+      {featuredCompetition ? (
+        <ActiveCompetitionBanner
+          name={featuredCompetition.name}
+          slug={featuredCompetition.slug}
+          prizePoolCents={featuredCompetition.prizePoolCents}
+        />
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Projetos" value={formatNumber(projectCount)} />

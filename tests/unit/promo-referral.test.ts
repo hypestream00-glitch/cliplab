@@ -274,8 +274,9 @@ describe("referral", () => {
 describe("visual and public copy", () => {
   it("orders the new sidebar and keeps CortaClip public URLs", () => {
     const hrefs = studioNavGroups.flatMap((group) => group.items.map((item) => item.href));
-    expect(hrefs.slice(0, 7)).toEqual([
+    expect(hrefs.slice(0, 8)).toEqual([
       "/studio",
+      "/studio/trending",
       "/studio/projects",
       "/studio/clips",
       "/studio/create",
@@ -283,6 +284,7 @@ describe("visual and public copy", () => {
       "/studio/calendar",
       "/studio/accounts",
     ]);
+    expect(hrefs).toContain("/studio/competitions");
     const sidebar = readFileSync(path.join(root, "components/layout/sidebar.tsx"), "utf8");
     expect(sidebar).toContain("CouponCard");
     expect(sidebar).toContain("Novo projeto");

@@ -97,7 +97,19 @@ export function StatusBadge({ status }: { status: string }) {
     DRAFT: "bg-muted text-muted-foreground",
     OFFLINE: "bg-muted text-muted-foreground",
     CANCELED: "bg-muted text-muted-foreground",
+    CANCELLED: "bg-red-500/15 text-red-300",
     ARCHIVED: "bg-muted text-muted-foreground",
+    FINALIZING: "bg-yellow-500/15 text-yellow-300",
+    FINISHED: "bg-violet-500/15 text-violet-300",
+    PENDING: "bg-yellow-500/15 text-yellow-300",
+    VERIFIED: "bg-emerald-500/15 text-emerald-300",
+    REJECTED: "bg-red-500/15 text-red-300",
+    REMOVED: "bg-red-500/15 text-red-300",
+    FLAGGED: "bg-amber-500/15 text-amber-200",
+    OPEN: "bg-emerald-500/15 text-emerald-300",
+    CLOSED: "bg-violet-500/15 text-violet-300",
+    PAID: "bg-emerald-500/15 text-emerald-300",
+    APPROVED: "bg-sky-500/15 text-sky-300",
   };
   return (
     <span className={cn("inline-flex h-5 items-center rounded-md px-1.5 text-[11px] font-medium", tone[status] ?? "bg-muted text-muted-foreground")}>

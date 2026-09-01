@@ -5,16 +5,20 @@ import { syncDueXAnalytics } from "@/lib/services/x-analytics";
 import { syncDueYouTubeAnalytics } from "@/lib/services/youtube-analytics";
 import { syncDueUploadPostAnalytics } from "@/lib/social/upload-post/analytics";
 import { isUploadPostPrimary } from "@/lib/social/router";
+import { syncCompetitionSubmissionMetrics } from "@/lib/competitions/sync";
+import { refreshCompetitionStatuses } from "@/lib/competitions/admin";
 
 export function createAnalyticsWorker() {
   return createWorker("analytics-sync", async () => {
+    await refreshCompetitionStatuses();
     if (isUploadPostPrimary()) {
       await syncDueUploadPostAnalytics();
-      return;
+    } else {
+      await syncDueTikTokAnalytics();
+      await syncDueMetaAnalytics();
+      await syncDueXAnalytics();
+      await syncDueYouTubeAnalytics();
     }
-    await syncDueTikTokAnalytics();
-    await syncDueMetaAnalytics();
-    await syncDueXAnalytics();
-    await syncDueYouTubeAnalytics();
+    await syncCompetitionSubmissionMetrics();
   });
 }

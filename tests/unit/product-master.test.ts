@@ -118,6 +118,8 @@ describe("studio nav", () => {
         "/studio/calendar",
         "/studio/accounts",
         "/studio/analytics",
+        "/studio/trending",
+        "/studio/competitions",
         "/studio/settings",
       ]),
     );

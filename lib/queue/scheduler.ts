@@ -58,21 +58,28 @@ async function maybeSyncAnalyticsInProcess() {
         OR: [{ lastSyncAt: null }, { lastSyncAt: { lt: new Date(Date.now() - ANALYTICS_EVERY_MS) } }],
       },
     });
-    if (due === 0) return;
-    const { isUploadPostPrimary } = await import("@/lib/social/router");
-    if (isUploadPostPrimary()) {
-      const { syncDueUploadPostAnalytics } = await import("@/lib/social/upload-post/analytics");
-      await syncDueUploadPostAnalytics();
-      return;
+    if (due > 0) {
+      const { isUploadPostPrimary } = await import("@/lib/social/router");
+      if (isUploadPostPrimary()) {
+        const { syncDueUploadPostAnalytics } = await import("@/lib/social/upload-post/analytics");
+        await syncDueUploadPostAnalytics();
+      } else {
+        const { syncDueTikTokAnalytics } = await import("@/lib/services/tiktok-analytics");
+        const { syncDueMetaAnalytics } = await import("@/lib/services/meta-analytics");
+        const { syncDueXAnalytics } = await import("@/lib/services/x-analytics");
+        const { syncDueYouTubeAnalytics } = await import("@/lib/services/youtube-analytics");
+        await syncDueTikTokAnalytics();
+        await syncDueMetaAnalytics();
+        await syncDueXAnalytics();
+        await syncDueYouTubeAnalytics();
+      }
     }
-    const { syncDueTikTokAnalytics } = await import("@/lib/services/tiktok-analytics");
-    const { syncDueMetaAnalytics } = await import("@/lib/services/meta-analytics");
-    const { syncDueXAnalytics } = await import("@/lib/services/x-analytics");
-    const { syncDueYouTubeAnalytics } = await import("@/lib/services/youtube-analytics");
-    await syncDueTikTokAnalytics();
-    await syncDueMetaAnalytics();
-    await syncDueXAnalytics();
-    await syncDueYouTubeAnalytics();
+    const { syncCompetitionSubmissionMetrics } = await import("@/lib/competitions/sync");
+    const { refreshCompetitionStatuses } = await import("@/lib/competitions/admin");
+    const { persistTrendScores } = await import("@/lib/trending/query");
+    await refreshCompetitionStatuses();
+    await syncCompetitionSubmissionMetrics();
+    await persistTrendScores().catch(() => undefined);
   } catch (error) {
     logger.warn({ errType: error instanceof Error ? error.name : "Error" }, "in-process analytics sync skipped");
   }

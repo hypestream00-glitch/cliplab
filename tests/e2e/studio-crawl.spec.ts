@@ -18,6 +18,8 @@ const studioRoutes = [
   "/studio/metrics/content",
   "/studio/live",
   "/studio/live/channels",
+  "/studio/trending",
+  "/studio/competitions",
   "/studio/championships",
   "/studio/championships/new",
   "/studio/team",
@@ -34,7 +36,7 @@ const studioRoutes = [
   "/studio/settings/security",
 ];
 
-const adminRoutes = ["/admin", "/admin/users", "/admin/workspaces", "/admin/jobs", "/admin/billing"];
+const adminRoutes = ["/admin", "/admin/users", "/admin/workspaces", "/admin/jobs", "/admin/competitions", "/admin/trending", "/admin/billing"];
 
 async function login(page: Page, email: string) {
   await page.goto("/login");

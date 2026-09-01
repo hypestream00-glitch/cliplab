@@ -168,6 +168,7 @@ enum NotificationType {
   LIVE_STARTED
   PROCESSING_FAILED
   ACCOUNT_RECONNECT
+  COMPETITION
 }
 
 enum ProcessingJobType {
@@ -250,6 +251,11 @@ model User {
   apiKeys            ApiKey[]
   championshipsOwned Championship[]        @relation("ChampionshipOwner")
   clipSubmissions    ClipSubmission[]
+  competitionsCreated Competition[]        @relation("CompetitionCreator")
+  competitionParticipants CompetitionParticipant[]
+  competitionSubmissions CompetitionSubmission[]
+  competitionPayouts CompetitionPayout[]
+  competitionAudits  CompetitionAuditLog[]
   promoRedemptions   PromoRedemption[]
   referralProfile    ReferralProfile?
   referralsMade      ReferralAttribution[] @relation("Referrer")
@@ -374,6 +380,8 @@ model Workspace {
   promoRedemptions   PromoRedemption[]
   grants             WorkspaceGrant[]
   referralRewards    ReferralReward[]
+  competitionParticipants CompetitionParticipant[]
+  competitionSubmissions CompetitionSubmission[]
 
   @@index([createdAt])
 }
@@ -464,6 +472,7 @@ model Project {
   transcript  Transcript?
   clips       Clip[]
   jobs        ProcessingJob[]
+  competitionSources CompetitionOfficialSource[]
 
   @@index([workspaceId, createdAt])
   @@index([status])
@@ -556,6 +565,7 @@ model Clip {
   publications   SocialPublication[]
   submissions    ClipSubmission[]
   renderedAssets RenderedAsset[]
+  competitionSubmissions CompetitionSubmission[]
 
   @@index([workspaceId, createdAt])
   @@index([projectId])
@@ -752,6 +762,7 @@ model SocialAccount {
   metricSnaps   SocialMetricSnapshot[]
   postMetrics   SocialPostMetricSnapshot[]
   liveChannels  LiveChannel[]
+  competitionSubmissions CompetitionSubmission[]
 
   @@unique([workspaceId, platform, externalAccountId])
   @@index([workspaceId])
@@ -813,6 +824,7 @@ model SocialPublication {
   clip      Clip?                      @relation(fields: [clipId], references: [id])
   targets   SocialPublicationTarget[]
   schedule  Schedule?
+  competitionSubmissions CompetitionSubmission[]
 
   @@index([workspaceId, createdAt])
   @@index([status])
@@ -1387,6 +1399,259 @@ model ReferralReward {
 
   @@index([referrerUserId])
   @@index([workspaceId])
+}
+
+enum CompetitionStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  FINALIZING
+  FINISHED
+  CANCELLED
+}
+
+enum CompetitionPrizeMode {
+  RANKING
+  VIEWS
+  HYBRID
+}
+
+enum CompetitionParticipantStatus {
+  ACTIVE
+  DISQUALIFIED
+  LEFT
+}
+
+enum CompetitionSubmissionStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  REMOVED
+  FLAGGED
+}
+
+enum CompetitionPayoutStatus {
+  PENDING
+  APPROVED
+  PAID
+}
+
+model Competition {
+  id                     String               @id @default(cuid())
+  slug                   String               @unique
+  name                   String
+  description            String?
+  bannerUrl              String?
+  prizePoolCents         Int
+  prizeMode              CompetitionPrizeMode @default(RANKING)
+  rankingBudgetCents     Int                  @default(0)
+  viewsBudgetCents       Int                  @default(0)
+  status                 CompetitionStatus    @default(DRAFT)
+  startsAt               DateTime
+  endsAt                 DateTime
+  allowedPlatforms       String[]
+  maxClipsPerParticipant Int                  @default(20)
+  rules                  String?
+  requiredHashtags       String[]
+  requiredText           String?
+  createdById            String
+  finalizedAt            DateTime?
+  metricsSyncedAt        DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  createdBy    User                          @relation("CompetitionCreator", fields: [createdById], references: [id])
+  prizeRules   CompetitionPrizeRule[]
+  participants CompetitionParticipant[]
+  submissions  CompetitionSubmission[]
+  sources      CompetitionOfficialSource[]
+  payouts      CompetitionPayout[]
+  audits       CompetitionAuditLog[]
+
+  @@index([status, startsAt])
+  @@index([endsAt])
+}
+
+model CompetitionPrizeRule {
+  id                 String @id @default(cuid())
+  competitionId      String
+  kind               String
+  position           Int?
+  amountCents        Int    @default(0)
+  viewsRequired      Int?
+  viewsPerUnit       Int?
+  amountPerUnitCents Int?
+  sortOrder          Int    @default(0)
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@index([competitionId, kind, sortOrder])
+}
+
+model CompetitionParticipant {
+  id              String                       @id @default(cuid())
+  competitionId   String
+  userId          String
+  workspaceId     String
+  status          CompetitionParticipantStatus @default(ACTIVE)
+  joinedAt        DateTime                     @default(now())
+  disqualifiedAt  DateTime?
+  disqualifyReason String?
+
+  competition Competition               @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  user        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  submissions CompetitionSubmission[]
+  payouts     CompetitionPayout[]
+
+  @@unique([competitionId, userId])
+  @@index([competitionId, status])
+}
+
+model CompetitionSubmission {
+  id                 String                       @id @default(cuid())
+  competitionId      String
+  participantId      String
+  userId             String
+  workspaceId        String
+  socialAccountId    String
+  publicationId      String?
+  clipId             String?
+  platform           SocialPlatform
+  postExternalId     String
+  postUrl            String
+  publishedAt        DateTime?
+  status             CompetitionSubmissionStatus  @default(PENDING)
+  rejectReason       String?
+  flagReason         String?
+  latestViews        Int?
+  latestLikes        Int?
+  latestComments     Int?
+  latestShares       Int?
+  metricsAvailable   Boolean                      @default(false)
+  lastSyncedAt       DateTime?
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+
+  competition   Competition                     @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  participant   CompetitionParticipant          @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  user          User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace                       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount                   @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  publication   SocialPublication?              @relation(fields: [publicationId], references: [id], onDelete: SetNull)
+  clip          Clip?                           @relation(fields: [clipId], references: [id], onDelete: SetNull)
+  metrics       CompetitionSubmissionMetric[]
+
+  @@unique([competitionId, platform, postExternalId])
+  @@index([competitionId, status])
+  @@index([participantId])
+  @@index([socialAccountId])
+}
+
+model CompetitionSubmissionMetric {
+  id           String   @id @default(cuid())
+  submissionId String
+  views        Int?
+  likes        Int?
+  comments     Int?
+  shares       Int?
+  capturedAt   DateTime
+  source       String
+  available    Json?
+
+  submission CompetitionSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId, capturedAt])
+}
+
+model CompetitionOfficialSource {
+  id            String  @id @default(cuid())
+  competitionId String
+  title         String
+  projectId     String?
+  sourceUrl     String?
+  platform      String?
+  sortOrder     Int     @default(0)
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  project     Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([competitionId])
+}
+
+model CompetitionPayout {
+  id            String                   @id @default(cuid())
+  competitionId String
+  participantId String
+  userId        String
+  amountCents   Int
+  kind          String
+  position      Int?
+  status        CompetitionPayoutStatus  @default(PENDING)
+  note          String?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  competition Competition             @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  participant CompetitionParticipant  @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([competitionId, status])
+  @@index([userId])
+}
+
+model CompetitionAuditLog {
+  id            String   @id @default(cuid())
+  competitionId String
+  actorUserId   String?
+  action        String
+  entityType    String
+  entityId      String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  actor       User?       @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([competitionId, createdAt])
+}
+
+model TrendingItem {
+  id              String    @id @default(cuid())
+  platform        String
+  category        String    @default("Outros")
+  title           String
+  creatorName     String?
+  thumbnailUrl    String?
+  canonicalUrl    String?
+  externalId      String?
+  durationSeconds Int?
+  viewCount       Int?
+  views24h        Int?
+  views7d         Int?
+  engagement      Int?
+  publishedAt     DateTime?
+  source          String
+  projectId       String?
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  scores          TrendingScore[]
+
+  @@index([active, platform, category])
+  @@index([publishedAt])
+}
+
+model TrendingScore {
+  id          String   @id @default(cuid())
+  itemId      String
+  score       Int?
+  computedAt  DateTime
+  inputs      Json?
+
+  item TrendingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId, computedAt])
 }
 
 enum EmailOutboxStatus {

@@ -31,6 +31,18 @@ const STATUS_LABELS: Record<string, string> = {
   RENDERED: "Exportado",
   RENDERING: "Exportando",
   DONE: "Concluído",
+  FINALIZING: "Encerrando",
+  FINISHED: "Finalizado",
+  CANCELLED: "Cancelado",
+  PENDING: "Em análise",
+  VERIFIED: "Verificado",
+  REJECTED: "Inválido",
+  REMOVED: "Removido",
+  FLAGGED: "Em revisão",
+  OPEN: "Aberto",
+  CLOSED: "Encerrado",
+  PAID: "Pago",
+  APPROVED: "Aprovado",
 };
 
 export function statusLabel(status: string) {
