@@ -182,6 +182,30 @@ describe("email outbox", () => {
       else delete process.env[key];
     }
   });
+
+  it("does not wait on SMTP when flush is false", async () => {
+    sendMock.mockImplementation(() => new Promise(() => undefined));
+    findUnique.mockResolvedValueOnce(null).mockResolvedValue({ id: "mail_2", status: "PENDING" });
+    create.mockResolvedValueOnce({
+      id: "mail_2",
+      type: "verify-email",
+      recipient: "a@b.com",
+      status: "PENDING",
+      attempts: 0,
+      payload: {},
+    });
+    const { enqueueEmail } = await import("@/lib/email/outbox");
+    const result = await enqueueEmail({
+      type: "verify-email",
+      to: "a@b.com",
+      userId: "user_1",
+      idempotencyKey: "verify:user_1:noflush",
+      flush: false,
+    });
+    expect(result.queued).toBe(true);
+    expect(result.sent).toBe(false);
+    expect(sendMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("workspace isolation in billing mail keys", () => {

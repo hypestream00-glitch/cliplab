@@ -14,6 +14,7 @@ export async function sendTemplatedEmail(params: {
   workspaceId?: string | null;
   idempotencyKey?: string;
   rawToken?: string;
+  flush?: boolean;
 }): Promise<SendEmailResult> {
   const template = emailTemplate(params.template);
   const queued = await enqueueEmail({
@@ -24,6 +25,7 @@ export async function sendTemplatedEmail(params: {
     idempotencyKey: params.idempotencyKey ?? `${params.template}:${params.to}:${Date.now()}`,
     vars: params.vars,
     rawToken: params.rawToken,
+    flush: params.flush,
   });
   if (queued.duplicate) {
     return { ok: true, id: template.id, delivered: false, duplicate: true };
@@ -50,6 +52,7 @@ export async function sendVerificationEmail(params: {
     vars: { name: params.name ?? undefined },
     rawToken: params.rawToken,
     idempotencyKey: `verify:${params.userId}:${params.rawToken.slice(0, 12)}`,
+    flush: false,
   });
 }
 

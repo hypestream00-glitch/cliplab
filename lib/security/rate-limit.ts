@@ -1,3 +1,4 @@
+import { withTimeoutFallback } from "@/lib/async/timeout";
 import { isRedisConfigured } from "@/lib/queue/redis";
 
 type Bucket = { count: number; resetAt: number };
@@ -27,10 +28,11 @@ export async function rateLimitAsync(params: { key: string; limit: number; windo
       const redis = getSharedRedis();
       if (redis) {
         const redisKey = `cliplab:rl:${params.key}`;
-        const count = await redis.incr(redisKey);
-        if (count === 1) await redis.pexpire(redisKey, params.windowMs);
+        const count = await withTimeoutFallback(redis.incr(redisKey), 2_500, -1, "rate-limit incr");
+        if (count < 0) return rateLimit(params);
+        if (count === 1) await withTimeoutFallback(redis.pexpire(redisKey, params.windowMs), 2_000, 0, "rate-limit expire");
         if (count > params.limit) {
-          const ttl = await redis.pttl(redisKey);
+          const ttl = await withTimeoutFallback(redis.pttl(redisKey), 2_000, params.windowMs, "rate-limit ttl");
           return { ok: false, retryAfterSec: Math.max(1, Math.ceil((ttl > 0 ? ttl : params.windowMs) / 1000)) };
         }
         return { ok: true };

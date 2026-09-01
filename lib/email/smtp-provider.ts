@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { withTimeout } from "@/lib/async/timeout";
 import { logger } from "@/lib/logger";
 import { isEmailConfigured, smtpAuthPassword, smtpFromAddress, smtpFromName, smtpPort, smtpSecure } from "@/lib/email/config";
 import type { EmailMessage, EmailProvider } from "@/lib/email/provider";
@@ -14,6 +15,9 @@ function createTransport() {
     port: smtpPort(),
     secure,
     requireTLS: !secure,
+    connectionTimeout: 8_000,
+    greetingTimeout: 8_000,
+    socketTimeout: 12_000,
     auth: {
       user: smtpAuthUser(),
       pass: smtpAuthPassword(),
@@ -50,13 +54,17 @@ export class SmtpEmailProvider implements EmailProvider {
     }
     try {
       const transporter = createTransport();
-      const info = await transporter.sendMail({
-        from: `"${smtpFromName().replace(/"/g, "")}" <${smtpFromAddress()}>`,
-        to: message.to,
-        subject: message.subject,
-        text: message.text,
-        html: message.html,
-      });
+      const info = await withTimeout(
+        transporter.sendMail({
+          from: `"${smtpFromName().replace(/"/g, "")}" <${smtpFromAddress()}>`,
+          to: message.to,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+        }),
+        12_000,
+        "smtp send",
+      );
       const accepted = addresses(info.accepted);
       const rejected = addresses(info.rejected);
       if (!accepted.length || rejected.length) {
@@ -75,7 +83,7 @@ export class SmtpEmailProvider implements EmailProvider {
     if (!isEmailConfigured()) return { ok: false as const, error: "EMAIL: CONFIGURATION REQUIRED" };
     try {
       const transporter = createTransport();
-      await transporter.verify();
+      await withTimeout(transporter.verify(), 8_000, "smtp verify");
       return { ok: true as const };
     } catch (error) {
       const code = smtpFailureCode(error);

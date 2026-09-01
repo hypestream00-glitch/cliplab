@@ -7,81 +7,57 @@ import { signIn } from "@/lib/auth";
 import { prisma } from "@/lib/db/prisma";
 import { signUpSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "@/lib/validations";
 import { rateLimitGuard } from "@/lib/security/guard";
-import { ensureProductPlans } from "@/lib/billing/ensure-plans";
 import { consumeAuthToken, issueAuthToken, latestTokenIssuedAt } from "@/lib/email/tokens";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "@/lib/email/send";
 import { clearVerifyEmailHint, setVerifyEmailHint } from "@/lib/email/hint-cookie";
 import { logger } from "@/lib/logger";
+import { completeSignup, SIGNUP_LOG, signupErrorLog } from "@/lib/auth/register";
+import { isNextRedirectError, safeErrorType, withTimeout } from "@/lib/async/timeout";
 
 const RESEND_COOLDOWN_MS = 60_000;
 
-function firstNameFrom(name: string) {
-  return name.trim().split(/\s+/)[0] || "Criador";
-}
-
-async function provisionWorkspace(user: { id: string; name: string | null }) {
-  const firstName = firstNameFrom(user.name ?? "Criador");
-  const slug = `${firstName.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 24)}-${user.id.slice(-4)}`;
-  const workspace = await prisma.workspace.create({
-    data: {
-      name: `Workspace de ${firstName}`,
-      slug,
-      type: "PERSONAL",
-      members: { create: { userId: user.id, role: "OWNER" } },
-    },
-  });
-  await ensureProductPlans();
-  const free = await prisma.plan.findUnique({ where: { code: "FREE" } });
-  if (free) {
-    const now = new Date();
-    await prisma.subscription.create({
-      data: {
-        workspaceId: workspace.id,
-        planId: free.id,
-        status: "ACTIVE",
-        currentPeriodStart: now,
-        currentPeriodEnd: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30),
-      },
-    });
-  }
-  if (process.env.SOCIAL_PROVIDER !== "native" && process.env.UPLOAD_POST_API_KEY?.trim()) {
-    const { ensureUploadPostProfile } = await import("@/lib/social/upload-post/profiles");
-    await ensureUploadPostProfile(workspace.id).catch(() => undefined);
-  }
-  return workspace;
-}
-
 export async function registerAction(_prev: unknown, formData: FormData) {
-  const limited = await rateLimitGuard("register", 8, 15 * 60_000);
-  if (limited) return limited;
-  const parsed = signUpSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-    confirmPassword: formData.get("confirmPassword"),
-    terms: formData.get("terms") === "on" ? true : undefined,
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
-  }
-  const email = parsed.data.email.toLowerCase();
-  const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) return { error: "Este e-mail já está em uso." };
+  logger.info(SIGNUP_LOG.start);
+  try {
+    const limited = await withTimeout(rateLimitGuard("register", 8, 15 * 60_000), 4_000, "signup rate limit").catch(
+      () => null,
+    );
+    if (limited) {
+      logger.info(signupErrorLog("RATE_LIMIT"));
+      return limited;
+    }
+    const parsed = signUpSchema.safeParse({
+      name: formData.get("name"),
+      email: formData.get("email"),
+      password: formData.get("password"),
+      confirmPassword: formData.get("confirmPassword"),
+      terms: formData.get("terms") === "on" ? true : undefined,
+    });
+    if (!parsed.success) {
+      logger.info(signupErrorLog("VALIDATION"));
+      return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+    }
+    logger.info(SIGNUP_LOG.validationOk);
 
-  const passwordHash = await hashPassword(parsed.data.password);
-  const user = await prisma.user.create({
-    data: {
+    const result = await completeSignup({
       name: parsed.data.name,
-      email,
-      passwordHash,
-    },
-  });
-  await provisionWorkspace(user);
-  const rawToken = await issueAuthToken("verify", email);
-  await sendVerificationEmail({ to: email, userId: user.id, name: user.name, rawToken });
-  await setVerifyEmailHint(email);
-  logger.info({ userId: user.id }, "user registered pending email verification");
-  redirect("/verify-email");
+      email: parsed.data.email,
+      password: parsed.data.password,
+    });
+    if (!result.ok) return { error: result.error };
+
+    logger.info(SIGNUP_LOG.sessionStart);
+    await setVerifyEmailHint(result.email);
+    logger.info(SIGNUP_LOG.sessionOk);
+    logger.info({ userId: result.userId }, SIGNUP_LOG.complete);
+    logger.info({ userId: result.userId }, "user registered pending email verification");
+    redirect("/verify-email");
+  } catch (error) {
+    if (isNextRedirectError(error)) throw error;
+    const type = safeErrorType(error);
+    logger.warn({ errType: type }, signupErrorLog(type));
+    return { error: "Não foi possível criar a conta. Tente novamente." };
+  }
 }
 
 export async function loginAction(_prev: unknown, formData: FormData) {

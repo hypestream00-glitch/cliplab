@@ -6,6 +6,7 @@ import { isEmailConfigured } from "@/lib/email/config";
 import { getEmailProvider } from "@/lib/email/smtp-provider";
 import { renderEmailTemplate, type EmailTemplateId, type EmailTemplateVars } from "@/lib/email/templates";
 import { appPathUrl } from "@/lib/email/app-url";
+import { withTimeout } from "@/lib/async/timeout";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type EnqueueEmailInput = {
@@ -16,6 +17,8 @@ export type EnqueueEmailInput = {
   idempotencyKey: string;
   vars?: EmailTemplateVars;
   rawToken?: string;
+  /** Signup must not wait on SMTP. Worker `processEmailOutbox` delivers later. */
+  flush?: boolean;
 };
 
 function sanitizeError(value: string) {
@@ -69,7 +72,13 @@ export async function enqueueEmail(input: EnqueueEmailInput) {
         status: "PENDING",
       },
     });
-    await flushEmail(row.id);
+    if (input.flush !== false) {
+      try {
+        await withTimeout(flushEmail(row.id), 8_000, "email flush");
+      } catch {
+        logger.warn({ type: input.type }, "email flush timed out; left queued");
+      }
+    }
     const latest = await prisma.emailOutbox.findUnique({ where: { id: row.id }, select: { status: true } });
     return {
       queued: true as const,
