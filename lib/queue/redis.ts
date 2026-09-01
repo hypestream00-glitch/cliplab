@@ -18,6 +18,7 @@ export function bullmqConnection() {
     url,
     maxRetriesPerRequest: null as null,
     enableReadyCheck: false,
+    lazyConnect: true,
     connectTimeout: 10_000,
     keepAlive: 10_000,
     retryStrategy: (times: number) => Math.min(times * 200, 5000),
@@ -31,6 +32,7 @@ export function createRedisConnection() {
   const client = new IORedis(url, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
+    lazyConnect: true,
     connectTimeout: 10_000,
     keepAlive: 10_000,
     retryStrategy: (times) => Math.min(times * 200, 5000),
@@ -44,6 +46,13 @@ export function getSharedRedis() {
   if (shared !== undefined) return shared;
   shared = createRedisConnection();
   return shared;
+}
+
+export async function ensureSharedRedis() {
+  const redis = getSharedRedis();
+  if (!redis) return null;
+  if (redis.status === "wait") await redis.connect();
+  return redis;
 }
 
 export function resetRedisCache() {

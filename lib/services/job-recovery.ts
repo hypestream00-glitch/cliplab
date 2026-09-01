@@ -1,23 +1,24 @@
 import { prisma } from "@/lib/db/prisma";
 import { enqueue, getQueue, jobIdentityKey, type QueueName, type JobPayload } from "@/lib/queue";
 import { logger } from "@/lib/logger";
-import { enqueueDueScheduledPublications } from "@/lib/services/publishing";
 import { workerRuntimeStatus } from "@/lib/queue/heartbeat";
 import { STALE_ACTIVE_MS, toDbJobStatus } from "@/lib/jobs/status";
 import { shouldRecoverPersistedJob } from "@/lib/jobs/recovery-policy";
+import { shouldStartQueueConsumer } from "@/lib/queue/consumers";
+import { recordRedisUsage } from "@/lib/queue/redis-usage";
 
 function mapJobType(type: string): QueueName | null {
   if (type === "VIDEO_IMPORT" || type === "VIDEO_PROCESSING") return "video-import";
   if (type === "RENDER") return "render";
   if (type === "SOCIAL_PUBLISHING") return "social-publishing";
   if (type === "BULK_DOWNLOAD") return "bulk-download";
-  if (type === "ANALYTICS_SYNC") return "analytics-sync";
   return null;
 }
 
 async function bullJobIsLive(queueName: QueueName, payload: JobPayload): Promise<boolean> {
   const queue = getQueue(queueName);
   if (!queue) return false;
+  recordRedisUsage("recovery", 2);
   try {
     const job = await queue.getJob(jobIdentityKey(queueName, payload));
     if (!job) return false;
@@ -29,7 +30,6 @@ async function bullJobIsLive(queueName: QueueName, payload: JobPayload): Promise
 }
 
 export async function recoverPersistedJobs() {
-  const worker = await workerRuntimeStatus();
   const stale = await prisma.processingJob.findMany({
     where: {
       OR: [
@@ -40,10 +40,21 @@ export async function recoverPersistedJobs() {
     take: 25,
     orderBy: { createdAt: "asc" },
   });
+  const waitingRenders = await prisma.renderJob.findMany({
+    where: { status: "WAITING", createdAt: { lt: new Date(Date.now() - 15_000) } },
+    take: 10,
+  });
+  if (stale.length === 0 && waitingRenders.length === 0) {
+    logger.info({ recovered: 0 }, "job recovery sweep");
+    return 0;
+  }
+
+  const worker = await workerRuntimeStatus();
   let recovered = 0;
   for (const job of stale) {
     const queue = mapJobType(job.type);
     if (!queue || !job.entityId) continue;
+    if (!shouldStartQueueConsumer(queue)) continue;
     const payload: JobPayload = {
       jobId: job.id,
       workspaceId: job.workspaceId,
@@ -76,10 +87,6 @@ export async function recoverPersistedJobs() {
     }
   }
 
-  const waitingRenders = await prisma.renderJob.findMany({
-    where: { status: "WAITING", createdAt: { lt: new Date(Date.now() - 15_000) } },
-    take: 10,
-  });
   for (const job of waitingRenders) {
     try {
       await enqueue("render", {
@@ -92,12 +99,6 @@ export async function recoverPersistedJobs() {
     } catch (error) {
       logger.warn({ err: error, renderJobId: job.id }, "render recovery skipped");
     }
-  }
-
-  try {
-    recovered += await enqueueDueScheduledPublications();
-  } catch (error) {
-    logger.warn({ err: error }, "scheduled publication recovery skipped");
   }
 
   logger.info({ recovered }, "job recovery sweep");

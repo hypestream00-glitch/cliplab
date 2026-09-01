@@ -87,6 +87,11 @@ async function main() {
   }
   console.log("OK MODE — redis (local fallback disabled)");
 
+  process.env.CLIPLAB_ENABLE_INFRA_PROBE = "true";
+  process.env.BULLMQ_DRAIN_DELAY_SEC = "5";
+  const { createInfraProbeWorker } = await import("@/workers/infra-probe");
+  const probeWorker = createInfraProbeWorker();
+
   resetStorageCache();
   const storage = getStorage();
   const r2Key = `ws/_probe/${randomUUID()}.txt`;
@@ -177,6 +182,7 @@ async function main() {
       cleanup.disconnect();
     }
     await queue.close();
+    await probeWorker?.close();
     console.log("OK CLEANUP");
   } catch (error) {
     fail("CLEANUP", error);

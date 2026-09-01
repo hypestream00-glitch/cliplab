@@ -24,8 +24,8 @@ export function rateLimit(params: { key: string; limit: number; windowMs: number
 export async function rateLimitAsync(params: { key: string; limit: number; windowMs: number }): Promise<RateLimitResult> {
   if (isRedisConfigured()) {
     try {
-      const { getSharedRedis } = await import("@/lib/queue/redis");
-      const redis = getSharedRedis();
+      const { ensureSharedRedis } = await import("@/lib/queue/redis");
+      const redis = await ensureSharedRedis();
       if (redis) {
         const redisKey = `cliplab:rl:${params.key}`;
         const count = await withTimeoutFallback(redis.incr(redisKey), 2_500, -1, "rate-limit incr");

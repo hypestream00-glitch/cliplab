@@ -27,7 +27,6 @@ type WorkerLogger = {
   info: (obj: unknown, msg?: string) => void;
 };
 
-let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let shuttingDown = false;
 let stopClipLabWorkers: (() => void) | undefined;
 let closeQueueRuntime: (() => Promise<void>) | undefined;
@@ -54,9 +53,7 @@ async function boot() {
 
   const bootMod = await import("@/lib/queue/boot");
   const queueMod = await import("@/lib/queue");
-  const heartbeat = await import("@/lib/queue/heartbeat");
   const emailConfig = await import("@/lib/email/config");
-  const email = await import("@/lib/email/outbox");
   const logMod = await import("@/lib/logger");
   logger = logMod.logger;
   stopClipLabWorkers = bootMod.stopClipLabWorkers;
@@ -64,16 +61,6 @@ async function boot() {
 
   emailConfig.logSmtpEnvPresence();
   bootMod.startClipLabWorkers();
-  void heartbeat.beatWorker();
-  const sweepEmail = () =>
-    email.processEmailOutbox().catch((error) => {
-      logger?.warn({ errType: error instanceof Error ? error.name : "Error" }, "EMAIL SMTP ERROR: Timeout");
-    });
-  void sweepEmail();
-  heartbeatTimer = setInterval(() => {
-    void heartbeat.beatWorker().catch(() => undefined);
-    void sweepEmail();
-  }, 15_000);
   logger.info("CLIPLAB worker process started");
 }
 
@@ -81,10 +68,6 @@ async function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;
   logger?.info({ signal }, "CLIPLAB worker shutting down");
-  if (heartbeatTimer) {
-    clearInterval(heartbeatTimer);
-    heartbeatTimer = null;
-  }
   stopClipLabWorkers?.();
   try {
     await closeQueueRuntime?.();

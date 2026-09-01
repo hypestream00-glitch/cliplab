@@ -6,17 +6,14 @@ import { createAnalyticsWorker } from "@/workers/analytics";
 import { createInfraProbeWorker } from "@/workers/infra-probe";
 import { createHealthcheckWorker } from "@/workers/healthcheck";
 import { recoverPersistedJobs } from "@/lib/services/job-recovery";
-import { enqueueDueScheduledPublications } from "@/lib/services/publishing";
 import { shouldEmbedWorkers } from "@/lib/queue/runtime";
 import { isNextBuildPhase } from "@/lib/env/build-phase";
-import { beatWorker } from "@/lib/queue/heartbeat";
-import { processEmailOutbox } from "@/lib/email/outbox";
-import { prisma } from "@/lib/db/prisma";
 import { logger } from "@/lib/logger";
-import { cleanupExpiredUploads } from "@/lib/uploads/session";
+import { startWorkerScheduler, stopWorkerScheduler } from "@/lib/queue/scheduler";
+import { redisIdleDiagnosticLines } from "@/lib/queue/consumers";
+import { QUEUE_NAMES, startedQueueConsumers } from "@/lib/queue";
 
 let started = false;
-let scheduleTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startClipLabWorkers() {
   if (started) return;
@@ -29,45 +26,22 @@ export function startClipLabWorkers() {
   createInfraProbeWorker();
   createHealthcheckWorker();
   void recoverPersistedJobs().catch((error) => logger.warn({ err: error }, "initial job recovery failed"));
-  void beatWorker().catch(() => undefined);
-  if (!scheduleTimer) {
-    scheduleTimer = setInterval(() => {
-      void beatWorker().catch(() => undefined);
-      void processEmailOutbox().catch((error) => {
-        logger.warn({ errType: error instanceof Error ? error.name : "Error" }, "EMAIL SMTP ERROR: Timeout");
-      });
-      void enqueueDueScheduledPublications().catch(() => undefined);
-      void recoverPersistedJobs().catch(() => undefined);
-      void cleanupExpiredUploads().catch(() => undefined);
-      void (async () => {
-        const due = await prisma.socialAccount.count({
-          where: {
-            platform: { in: ["TIKTOK", "INSTAGRAM", "FACEBOOK", "X", "YOUTUBE"] },
-            mock: false,
-            OR: [{ lastSyncAt: null }, { lastSyncAt: { lt: new Date(Date.now() - 15 * 60 * 1000) } }],
-          },
-        });
-        if (due > 0) {
-          const { enqueue } = await import("@/lib/queue");
-          await enqueue("analytics-sync", {
-            jobId: `analytics-${Date.now()}`,
-            workspaceId: "system",
-            entityId: "social",
-            type: "analytics-sync",
-          });
-        }
-      })().catch(() => undefined);
-    }, 60_000);
+  startWorkerScheduler();
+  const startedNames = startedQueueConsumers();
+  const skipped = QUEUE_NAMES.filter((name) => !startedNames.includes(name));
+  for (const line of redisIdleDiagnosticLines(startedNames, skipped)) {
+    process.stdout.write(`${line}\n`);
   }
-  logger.info({ embedded: shouldEmbedWorkers() }, "CLIPLAB workers registered");
+  logger.info({ embedded: shouldEmbedWorkers(), consumers: startedNames }, "CLIPLAB workers registered");
 }
 
 export function stopClipLabWorkers() {
-  if (scheduleTimer) {
-    clearInterval(scheduleTimer);
-    scheduleTimer = null;
-  }
+  stopWorkerScheduler();
   started = false;
+}
+
+export function workersBooted() {
+  return started;
 }
 
 export function ensureDevWorkers() {

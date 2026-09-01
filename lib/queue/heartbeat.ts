@@ -2,9 +2,10 @@ import { writeFile, readFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { isRedisConfigured } from "@/lib/queue/redis";
+import { recordRedisUsage } from "@/lib/queue/redis-usage";
 
 const FILE = path.join(tmpdir(), "cliplab-worker-heartbeat");
-const STALE_MS = 45_000;
+const STALE_MS = 180_000;
 
 export async function beatWorker() {
   const stamp = String(Date.now());
@@ -12,9 +13,12 @@ export async function beatWorker() {
   await writeFile(FILE, stamp, "utf8").catch(() => undefined);
   if (!isRedisConfigured()) return;
   try {
-    const { getSharedRedis } = await import("@/lib/queue/redis");
-    const redis = getSharedRedis();
-    if (redis) await redis.set("cliplab:worker:heartbeat", stamp, "EX", 60);
+    const { ensureSharedRedis } = await import("@/lib/queue/redis");
+    const redis = await ensureSharedRedis();
+    if (redis) {
+      recordRedisUsage("heartbeat");
+      await redis.set("cliplab:worker:heartbeat", stamp, "EX", 180);
+    }
   } catch {
     /* heartbeat is best-effort */
   }
@@ -23,8 +27,8 @@ export async function beatWorker() {
 export async function workerHeartbeatAgeMs(): Promise<number | null> {
   if (isRedisConfigured()) {
     try {
-      const { getSharedRedis } = await import("@/lib/queue/redis");
-      const redis = getSharedRedis();
+      const { ensureSharedRedis } = await import("@/lib/queue/redis");
+      const redis = await ensureSharedRedis();
       const value = redis ? await redis.get("cliplab:worker:heartbeat") : null;
       if (value) return Date.now() - Number(value);
     } catch {

@@ -56,16 +56,13 @@ export async function pingRedis(): Promise<"READY" | "LOCAL FALLBACK" | "CONFIGU
   const url = process.env.REDIS_URL?.trim();
   if (!url) return isProductionRuntime() ? "CONFIGURATION REQUIRED" : "LOCAL FALLBACK";
   try {
-    const { createRedisConnection, redisUsesTls } = await import("@/lib/queue/redis");
-    const client = createRedisConnection();
-    if (!client) return isProductionRuntime() ? "CONFIGURATION REQUIRED" : "LOCAL FALLBACK";
-    if (url.startsWith("rediss://") && !redisUsesTls()) {
-      client.disconnect();
-      return "ERROR";
-    }
-    await client.ping();
-    client.disconnect();
-    return "READY";
+    const { redisUsesTls } = await import("@/lib/queue/redis");
+    const { cachedRedisPing } = await import("@/lib/queue/redis-health");
+    if (url.startsWith("rediss://") && !redisUsesTls()) return "ERROR";
+    const ping = await cachedRedisPing();
+    if (ping === "ok") return "READY";
+    if (ping === "unset") return isProductionRuntime() ? "CONFIGURATION REQUIRED" : "LOCAL FALLBACK";
+    return "ERROR";
   } catch {
     return "ERROR";
   }

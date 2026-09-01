@@ -502,7 +502,6 @@ export async function cancelPublication(workspaceId: string, publicationId: stri
 
 export async function enqueueDueScheduledPublications() {
   if (!socialPublishAllowed()) {
-    logger.info("ALLOW_SOCIAL_PUBLISH=false; skipping scheduled publication enqueue");
     return 0;
   }
   const due = await prisma.socialPublication.findMany({

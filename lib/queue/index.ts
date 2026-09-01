@@ -4,6 +4,8 @@ import { workerConcurrency, bullmqConnection } from "@/lib/queue/redis";
 import { beatWorker } from "@/lib/queue/heartbeat";
 import { QUEUE_RETRY } from "@/lib/queue/retry";
 import { queueMode } from "@/lib/queue/runtime";
+import { bullmqDrainDelaySec, BULLMQ_STALLED_INTERVAL_MS, shouldStartQueueConsumer } from "@/lib/queue/consumers";
+import { recordRedisUsage } from "@/lib/queue/redis-usage";
 
 export { QUEUE_RETRY } from "@/lib/queue/retry";
 export { isProductionRuntime, queueMode, isQueueMocked, shouldEmbedWorkers } from "@/lib/queue/runtime";
@@ -61,6 +63,7 @@ function connection() {
 
 const queues = new Map<QueueName, Queue>();
 const workers: Worker[] = [];
+const startedConsumers: QueueName[] = [];
 
 export function getQueue(name: QueueName) {
   const redis = connection();
@@ -117,6 +120,7 @@ export async function enqueue(name: QueueName, payload: JobPayload) {
   const mode = queueMode();
   const queue = getQueue(name);
   if (queue) {
+    recordRedisUsage(name === "social-publishing" ? "queue:social" : "queue:processing");
     await queue.add(name, payload, {
       ...defaultJobOptions,
       jobId: duplicateKey(name, payload),
@@ -140,8 +144,16 @@ export async function enqueue(name: QueueName, payload: JobPayload) {
   return { mocked: true as const, mode: "local" as const };
 }
 
+export function startedQueueConsumers() {
+  return [...startedConsumers];
+}
+
 export function createWorker(name: QueueName, processor: (payload: JobPayload) => Promise<void>) {
   registerQueueHandler(name, processor);
+  if (!shouldStartQueueConsumer(name)) {
+    logger.info({ queue: name }, "BullMQ worker not started (idle policy)");
+    return null;
+  }
   const redis = connection();
   if (!redis) {
     logger.warn({ queue: name }, "BullMQ worker skipped (REDIS_URL missing)");
@@ -156,9 +168,12 @@ export function createWorker(name: QueueName, processor: (payload: JobPayload) =
       connection: redis,
       concurrency: workerConcurrency(name),
       lockDuration: 10 * 60_000,
-      stalledInterval: 60_000,
+      stalledInterval: BULLMQ_STALLED_INTERVAL_MS,
+      drainDelay: bullmqDrainDelaySec(name),
+      skipStalledCheck: name === "healthcheck" || name === "infra-probe",
     },
   );
+  startedConsumers.push(name);
   worker.on("error", (error) => {
     logger.warn({ err: error, queue: name }, "bullmq worker error");
   });
@@ -203,6 +218,7 @@ export async function closeQueueRuntime() {
     }),
   );
   queues.clear();
+  startedConsumers.splice(0);
   const { resetRedisCache } = await import("@/lib/queue/redis");
   resetRedisCache();
 }

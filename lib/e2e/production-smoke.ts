@@ -235,7 +235,7 @@ async function checkQueueAndWorker(live: boolean, redisReady: boolean): Promise<
       const started = Date.now();
       const redis = getSharedRedis();
       const bullId = jobIdentityKey("healthcheck", payload);
-      while (Date.now() - started < 20_000) {
+      while (Date.now() - started < 45_000) {
         const state = await queue
           .getJob(bullId)
           .then((job) => job?.getState())

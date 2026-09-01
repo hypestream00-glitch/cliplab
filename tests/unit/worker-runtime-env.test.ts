@@ -61,11 +61,14 @@ describe("start-worker env preservation", () => {
     expect(source).toContain("await import(pathToFileURL(compiled).href)");
     expect(source).not.toMatch(/spawn\(process\.execPath,\s*\[compiled/);
     const index = readFileSync(path.join(root, "workers/index.ts"), "utf8");
+    const boot = readFileSync(path.join(root, "lib/queue/boot.ts"), "utf8");
     expect(index).toContain('bootLog("WORKER STARTED")');
     expect(index).toContain('await import("@/lib/queue/boot")');
-    expect(index).toContain("processEmailOutbox");
     expect(index).toContain("logSmtpEnvPresence");
     expect(index).not.toMatch(/import\s+\{[^}]*startClipLabWorkers/);
+    expect(index).not.toMatch(/setInterval/);
+    expect(boot).toContain("startWorkerScheduler");
+    expect(boot).toContain("stopWorkerScheduler");
   });
 
   it("reports REDIS_URL and DATABASE_URL present without connecting", () => {

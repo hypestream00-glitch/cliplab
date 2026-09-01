@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { essentialEnvErrors } from "@/lib/env/schema";
 import { prisma } from "@/lib/db/prisma";
 import { queueMode, isProductionRuntime } from "@/lib/queue/runtime";
-import { isRedisConfigured, getSharedRedis } from "@/lib/queue/redis";
+import { isRedisConfigured } from "@/lib/queue/redis";
+import { cachedRedisPing } from "@/lib/queue/redis-health";
 import { s3Configured } from "@/lib/storage/s3";
 import { readinessBody } from "@/lib/health/payload";
 
@@ -20,12 +21,7 @@ export async function GET() {
 
   let redis: "ok" | "error" | "unset" = "unset";
   if (isRedisConfigured()) {
-    try {
-      const pong = await getSharedRedis()?.ping();
-      redis = pong === "PONG" ? "ok" : "error";
-    } catch {
-      redis = "error";
-    }
+    redis = await cachedRedisPing();
   } else if (isProductionRuntime()) {
     redis = "error";
   }

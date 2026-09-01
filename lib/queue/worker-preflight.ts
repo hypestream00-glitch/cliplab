@@ -55,7 +55,7 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): P
 }
 
 export async function collectWorkerPreflightInput(): Promise<WorkerPreflightInput> {
-  const { isRedisConfigured, getSharedRedis } = await import("@/lib/queue/redis");
+  const { isRedisConfigured, ensureSharedRedis } = await import("@/lib/queue/redis");
   const { isProductionRuntime } = await import("@/lib/queue/runtime");
   const { s3Configured } = await import("@/lib/storage/s3");
   const { isFfmpegAvailable } = await import("@/lib/ffmpeg");
@@ -64,7 +64,12 @@ export async function collectWorkerPreflightInput(): Promise<WorkerPreflightInpu
   let redisPingOk = false;
   if (isRedisConfigured()) {
     try {
-      redisPingOk = (await withTimeout(getSharedRedis()?.ping() ?? Promise.resolve(null), 8_000, "redis ping")) === "PONG";
+      redisPingOk =
+        (await withTimeout(
+          ensureSharedRedis().then((redis) => redis?.ping() ?? null),
+          8_000,
+          "redis ping",
+        )) === "PONG";
     } catch {
       redisPingOk = false;
     }
