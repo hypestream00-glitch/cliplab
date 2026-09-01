@@ -18,7 +18,15 @@ const RECONCILE_MIGRATION = "20260901050500_reconcile_full_schema";
 const PROMO_MIGRATION = "20260901210000_promo_and_referral";
 const COMPETITIONS_MIGRATION = "20260901220000_competitions_and_trending";
 const AFFILIATE_MIGRATION = "20260901230000_affiliate_wallet";
-const ALL_MIGRATIONS = [FIRST_MIGRATION, RECONCILE_MIGRATION, PROMO_MIGRATION, COMPETITIONS_MIGRATION, AFFILIATE_MIGRATION];
+const PARTICIPANT_CODE_MIGRATION = "20260901240000_participant_codes";
+const ALL_MIGRATIONS = [
+  FIRST_MIGRATION,
+  RECONCILE_MIGRATION,
+  PROMO_MIGRATION,
+  COMPETITIONS_MIGRATION,
+  AFFILIATE_MIGRATION,
+  PARTICIPANT_CODE_MIGRATION,
+];
 const FIRST_SQL = readFileSync(path.resolve("prisma/migrations", FIRST_MIGRATION, "migration.sql"), "utf8");
 const SCHEMA = readFileSync(path.resolve("prisma/schema.prisma"), "utf8");
 const SCHEMA_MODELS = [...SCHEMA.matchAll(/^model (\w+)/gm)].map((match) => match[1]);

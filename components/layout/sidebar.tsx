@@ -100,6 +100,11 @@ export function Sidebar({
       <nav className="mt-3 flex-1 overflow-y-auto px-3 pb-4" aria-label="Navegação principal">
         {studioNavGroups.map((group, index) => (
           <div key={group.id} className={cn(index > 0 && "mt-4 border-t border-sidebar-border pt-4")}>
+            {group.label && !collapsed ? (
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-secondary/70">
+                {group.label}
+              </p>
+            ) : null}
             {group.items.map((item) => {
               const active = isActive(pathname, item.href, allHrefs);
               const Icon = item.icon;

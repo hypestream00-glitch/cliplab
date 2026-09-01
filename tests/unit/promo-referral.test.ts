@@ -341,7 +341,7 @@ describe("visual and public copy", () => {
     const referral = readFileSync(path.join(root, "components/layout/referral-button.tsx"), "utf8");
     expect(referral).toContain("Indique e ganhe");
     expect(referral).toContain("Copiar meu link");
-    expect(referral).toContain("Indique amigos e ganhe dinheiro");
+    expect(referral).toContain("Convide amigos para o CortaClip");
     expect(referral).toContain("Copiar meu link");
     expect(referral).toContain("Ver minha carteira");
     expect(referral).not.toContain("Ganhe Pro indicando amigos");

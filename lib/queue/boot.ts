@@ -5,6 +5,7 @@ import { createBulkDownloadWorker } from "@/workers/bulk-download";
 import { createAnalyticsWorker } from "@/workers/analytics";
 import { createInfraProbeWorker } from "@/workers/infra-probe";
 import { createHealthcheckWorker } from "@/workers/healthcheck";
+import { createLiveMonitorWorker } from "@/workers/live-monitor";
 import { recoverPersistedJobs } from "@/lib/services/job-recovery";
 import { shouldEmbedWorkers } from "@/lib/queue/runtime";
 import { isNextBuildPhase } from "@/lib/env/build-phase";
@@ -25,6 +26,7 @@ export function startClipLabWorkers() {
   createAnalyticsWorker();
   createInfraProbeWorker();
   createHealthcheckWorker();
+  createLiveMonitorWorker();
   void recoverPersistedJobs().catch((error) => logger.warn({ err: error }, "initial job recovery failed"));
   startWorkerScheduler();
   const startedNames = startedQueueConsumers();

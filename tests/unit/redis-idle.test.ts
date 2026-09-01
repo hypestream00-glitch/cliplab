@@ -38,6 +38,7 @@ describe("redis idle policy", () => {
     expect(shouldStartQueueConsumer("social-publishing", prod)).toBe(false);
     expect(shouldStartQueueConsumer("analytics-sync", prod)).toBe(false);
     expect(shouldStartQueueConsumer("infra-probe", prod)).toBe(false);
+    expect(shouldStartQueueConsumer("live-monitor", prod)).toBe(false);
     expect(shouldStartQueueConsumer("video-import", prod)).toBe(true);
     expect(shouldStartQueueConsumer("healthcheck", prod)).toBe(true);
     expect(alwaysOnQueueConsumers()).toEqual(["video-import", "render", "bulk-download", "healthcheck"]);

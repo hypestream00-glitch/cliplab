@@ -25,6 +25,10 @@ const affiliateSql = readFileSync(
   path.join(migrationsDir, "20260901230000_affiliate_wallet/migration.sql"),
   "utf8",
 );
+const participantCodeSql = readFileSync(
+  path.join(migrationsDir, "20260901240000_participant_codes/migration.sql"),
+  "utf8",
+);
 
 const schemaModels = [...schema.matchAll(/^model (\w+)/gm)].map((match) => match[1]);
 const schemaEnums = [...schema.matchAll(/^enum (\w+)/gm)].map((match) => match[1]);
@@ -82,6 +86,7 @@ describe("CLIPLAB Prisma schema audit and reconciliation", () => {
       "20260901210000_promo_and_referral",
       "20260901220000_competitions_and_trending",
       "20260901230000_affiliate_wallet",
+      "20260901240000_participant_codes",
     ]);
   });
 
@@ -125,7 +130,7 @@ describe("CLIPLAB Prisma schema audit and reconciliation", () => {
   });
 
   it("never drops, truncates, force-resets, or marks migrations applied in SQL", () => {
-    for (const sql of [processingJobSql, reconcileSql, promoSql, competitionsSql, affiliateSql]) {
+    for (const sql of [processingJobSql, reconcileSql, promoSql, competitionsSql, affiliateSql, participantCodeSql]) {
       expect(sql).not.toMatch(/\bDROP TABLE\b/i);
       expect(sql).not.toMatch(/\bDROP COLUMN\b/i);
       expect(sql).not.toMatch(/\bTRUNCATE TABLE\b/i);
@@ -143,6 +148,8 @@ describe("CLIPLAB Prisma schema audit and reconciliation", () => {
     expect(affiliateSql).toContain("WalletLedgerEntry");
     expect(affiliateSql).toContain("ALTER COLUMN \"grantId\" DROP NOT NULL");
     expect(affiliateSql).not.toMatch(/\bDROP TABLE\b/i);
+    expect(participantCodeSql).toContain("participantCode");
+    expect(schema).toContain("participantCode");
   });
 
   it("is what worker recovery queries after schema exists", () => {

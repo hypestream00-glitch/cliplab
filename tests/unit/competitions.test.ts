@@ -22,7 +22,14 @@ const competitions: Array<{
   allowedPlatforms: string[];
   maxClipsPerParticipant: number;
 }> = [];
-const participants: Array<{ id: string; competitionId: string; userId: string; workspaceId: string; status: string }> = [];
+const participants: Array<{
+  id: string;
+  competitionId: string;
+  userId: string;
+  workspaceId: string;
+  status: string;
+  participantCode?: string;
+}> = [];
 const submissions: Array<{
   id: string;
   competitionId: string;
@@ -67,8 +74,15 @@ vi.mock("@/lib/db/prisma", () => ({
             row.competitionId === where.competitionId_userId.competitionId &&
             row.userId === where.competitionId_userId.userId,
         ) ?? null,
-      create: async ({ data }: { data: { competitionId: string; userId: string; workspaceId: string } }) => {
-        if (participants.some((row) => row.competitionId === data.competitionId && row.userId === data.userId)) {
+      create: async ({
+        data,
+      }: {
+        data: { competitionId: string; userId: string; workspaceId: string; participantCode: string };
+      }) => {
+        if (
+          participants.some((row) => row.competitionId === data.competitionId && row.userId === data.userId) ||
+          participants.some((row) => row.participantCode === data.participantCode)
+        ) {
           throw { code: "P2002" };
         }
         const row = { id: `p_${participants.length + 1}`, status: "ACTIVE", ...data };
@@ -316,6 +330,7 @@ describe("participation and submissions", () => {
     const first = await joinCompetition({ competitionId: "c1", userId: "u1", workspaceId: "ws1" });
     const second = await joinCompetition({ competitionId: "c1", userId: "u1", workspaceId: "ws1" });
     expect(first.ok).toBe(true);
+    if (first.ok) expect(first.participantCode).toMatch(/^CC-[A-Z0-9]{6}$/);
     expect(second).toEqual({ ok: false, error: "Você já está neste campeonato." });
   });
 

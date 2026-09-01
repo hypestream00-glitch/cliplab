@@ -9,6 +9,7 @@ import { visibleMetricSnapshotWhere, visiblePublicationWhere, visibleSocialAccou
 import { realSnapshotMetric, formatMetricOrEmpty } from "@/lib/data/metrics-display";
 import { getCliplabPublishedViews } from "@/lib/analytics/cliplab-views";
 import { accountAnalyticsDisclaimer, cliplabViewsEmptyHint } from "@/lib/analytics/provenance";
+import { recommendPostingHours } from "@/lib/analytics/best-posting-time";
 
 export const metadata = { title: "Analytics" };
 
@@ -19,7 +20,7 @@ export default async function MetricsPage({ searchParams }: PageSearchProps) {
   const days = Number(range) || 30;
   const since = daysAgo(days);
 
-  const [snapshots, publishedCount, cliplabViews, accounts] = await Promise.all([
+  const [snapshots, publishedCount, cliplabViews, accounts, postingRows] = await Promise.all([
     prisma.socialMetricSnapshot.findMany({
       where: { ...visibleMetricSnapshotWhere(workspace.id), capturedAt: { gte: since } },
       orderBy: { capturedAt: "asc" },
@@ -32,7 +33,17 @@ export default async function MetricsPage({ searchParams }: PageSearchProps) {
       where: visibleSocialAccountWhere(workspace.id),
       include: { metricSnaps: { orderBy: { capturedAt: "desc" }, take: 1 } },
     }),
+    prisma.socialPublicationTarget.findMany({
+      where: {
+        status: "PUBLISHED",
+        publishedAt: { not: null },
+        publication: { ...visiblePublicationWhere(workspace.id), status: "PUBLISHED" },
+      },
+      select: { publishedAt: true, views: true },
+      take: 400,
+    }),
   ]);
+  const posting = recommendPostingHours(postingRows);
   const latest = snapshots.at(-1);
   const accountViews = realSnapshotMetric(latest, "views");
   const likes = realSnapshotMetric(latest, "likes");
@@ -81,6 +92,23 @@ export default async function MetricsPage({ searchParams }: PageSearchProps) {
             hint={cliplabViews == null ? cliplabViewsEmptyHint() : undefined}
           />
         </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-2 text-[15px] font-semibold tracking-tight">Melhores horários</h2>
+        {posting.ready ? (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {posting.slots.map((slot) => (
+              <article key={`${slot.label}-${slot.time}`} className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-[12px] text-muted-foreground">{slot.label}</p>
+                <p className="mt-1 text-[20px] font-semibold">{slot.time}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[13px] text-muted-foreground">{posting.message}</p>
+        )}
+        {posting.ready ? <p className="mt-2 text-[12px] text-muted-foreground">{posting.message}</p> : null}
       </section>
 
       {connectedAccountCount > 0 ? (

@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { requireWorkspaceContext } from "@/lib/auth/session";
+import { requireUser, requireWorkspaceContext } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { randomToken } from "@/lib/security/crypto";
 import type { WorkspaceRole } from "@/generated/prisma/client";
@@ -39,6 +40,52 @@ export async function inviteMemberAction(formData: FormData) {
     },
   });
 
+  revalidatePath("/studio/team");
+  redirect("/studio/team");
+}
+
+export async function acceptInvitationAction(formData: FormData) {
+  const user = await requireUser();
+  const token = String(formData.get("token") ?? "");
+  const invite = await prisma.workspaceInvitation.findUnique({ where: { token } });
+  if (!invite || invite.status !== "PENDING") {
+    redirect("/studio/team/accept?error=invalid");
+  }
+  if (invite.expiresAt < new Date()) {
+    redirect("/studio/team/accept?error=expired");
+  }
+  const email = user.email?.trim().toLowerCase();
+  if (!email || email !== invite.email.toLowerCase()) {
+    redirect("/studio/team/accept?error=email");
+  }
+  await prisma.$transaction([
+    prisma.workspaceMember.upsert({
+      where: { workspaceId_userId: { workspaceId: invite.workspaceId, userId: user.id } },
+      create: { workspaceId: invite.workspaceId, userId: user.id, role: invite.role },
+      update: { role: invite.role },
+    }),
+    prisma.workspaceInvitation.update({
+      where: { id: invite.id },
+      data: { status: "ACCEPTED" },
+    }),
+    prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        workspaceId: invite.workspaceId,
+        action: "MEMBER_JOINED",
+        entityType: "Workspace",
+        entityId: invite.workspaceId,
+      },
+    }),
+  ]);
+  const cookieStore = await cookies();
+  cookieStore.set("cliplab.workspace", invite.workspaceId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
   revalidatePath("/studio/team");
   redirect("/studio/team");
 }

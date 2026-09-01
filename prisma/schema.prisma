@@ -1606,6 +1606,7 @@ model CompetitionParticipant {
   competitionId   String
   userId          String
   workspaceId     String
+  participantCode String                     @unique
   status          CompetitionParticipantStatus @default(ACTIVE)
   joinedAt        DateTime                     @default(now())
   disqualifiedAt  DateTime?

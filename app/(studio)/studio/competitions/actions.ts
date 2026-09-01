@@ -19,7 +19,9 @@ export async function joinCompetitionAction(formData: FormData) {
     redirect(`/studio/competitions/${slug}?error=${encodeURIComponent(result.error)}`);
   }
   revalidatePath(`/studio/competitions/${slug}`);
-  redirect(`/studio/competitions/${slug}`);
+  revalidatePath(`/studio/competitions/${slug}/me`);
+  revalidatePath("/studio/competitions/me");
+  redirect(`/studio/competitions/${slug}/me`);
 }
 
 export async function submitCompetitionClipAction(formData: FormData) {

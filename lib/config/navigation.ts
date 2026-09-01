@@ -23,6 +23,9 @@ import {
   Flame,
   Gift,
   Banknote,
+  Medal,
+  Palette,
+  Briefcase,
 } from "lucide-react";
 
 export type NavItem = {
@@ -41,42 +44,60 @@ export type NavGroup = {
 export const studioNavGroups: NavGroup[] = [
   {
     id: "main",
+    label: "Principal",
     items: [
       { href: "/studio", label: "Dashboard", icon: Home },
       { href: "/studio/trending", label: "Em alta", icon: Flame },
       { href: "/studio/projects", label: "Projetos", icon: FolderKanban },
       { href: "/studio/clips", label: "Meus clips", icon: Scissors },
       { href: "/studio/create", label: "Criar", icon: Sparkles },
+    ],
+  },
+  {
+    id: "publishing",
+    label: "Publicação",
+    items: [
       { href: "/studio/publishing", label: "Publicar", icon: Send },
       { href: "/studio/calendar", label: "Calendário", icon: CalendarDays },
       { href: "/studio/accounts", label: "Contas sociais", icon: Share2 },
     ],
   },
   {
-    id: "competitions",
-    items: [{ href: "/studio/competitions", label: "Campeonatos", icon: Trophy }],
-  },
-  {
-    id: "insights",
+    id: "compete",
+    label: "Competir",
     items: [
-      { href: "/studio/analytics", label: "Analytics", icon: BarChart3 },
-      { href: "/studio/referrals", label: "Indique e ganhe", icon: Gift },
-      { href: "/studio/settings/billing", label: "Plano e uso", icon: Coins },
+      { href: "/studio/competitions", label: "Campeonatos", icon: Trophy },
+      { href: "/studio/ranking", label: "Ranking", icon: Medal },
+      { href: "/studio/competitions/me", label: "Minhas participações", icon: Users },
     ],
   },
   {
-    id: "settings",
-    items: [{ href: "/studio/settings", label: "Configurações", icon: Settings }],
+    id: "tools",
+    label: "Ferramentas",
+    items: [
+      { href: "/studio/templates", label: "Templates", icon: LayoutTemplate },
+      { href: "/studio/brand-kit", label: "Brand Kit", icon: Palette },
+      { href: "/studio/analytics", label: "Analytics", icon: BarChart3 },
+      { href: "/studio/live", label: "Clipping ao vivo", icon: Radio },
+    ],
+  },
+  {
+    id: "account",
+    label: "Conta",
+    items: [
+      { href: "/studio/settings/billing", label: "Plano e uso", icon: Coins },
+      { href: "/studio/referrals", label: "Indique e ganhe", icon: Gift },
+      { href: "/studio/clients", label: "Clientes", icon: Briefcase },
+      { href: "/studio/settings", label: "Configurações", icon: Settings },
+    ],
   },
 ];
 
 export const studioMoreItems: NavItem[] = [
   { href: "/studio/library", label: "Biblioteca", icon: Library },
   { href: "/studio/editor", label: "Editor", icon: Clapperboard },
-  { href: "/studio/templates", label: "Modelos", icon: LayoutTemplate },
   { href: "/studio/publishing/queue", label: "Fila", icon: ListTodo },
   { href: "/studio/publishing/autopilot", label: "Autopilot", icon: Bot },
-  { href: "/studio/live", label: "Live", icon: Radio },
   { href: "/studio/team", label: "Equipe", icon: Users },
   { href: "/studio/api", label: "API", icon: KeyRound },
 ];

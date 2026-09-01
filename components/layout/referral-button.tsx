@@ -39,9 +39,9 @@ export function ReferralButton({ url, invited, converted, availableCents, pendin
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>🎁 Indique amigos e ganhe dinheiro</DialogTitle>
+          <DialogTitle>🎁 Indique e ganhe</DialogTitle>
           <DialogDescription>
-            Compartilhe seu link exclusivo. Quando um amigo fizer a primeira assinatura paga, você recebe R$5 de saldo sacável e +30 minutos de IA. O amigo pode usar promoções e cupons normalmente.
+            Convide amigos para o CortaClip e ganhe recompensas quando eles se tornarem assinantes. A primeira assinatura paga válida libera R$5 de saldo e +30 minutos de processamento. Cadastro, trial e pagamentos falhos não geram recompensa.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-2">

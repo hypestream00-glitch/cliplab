@@ -13,13 +13,22 @@ export async function createLiveChannelAction(formData: FormData) {
   const platform = String(formData.get("platform") ?? "TWITCH") as SocialPlatform;
   const username = String(formData.get("username") ?? "");
   if (!LIVE_PLATFORMS.includes(platform)) {
-    redirect("/studio/live/channels");
+    redirect("/studio/live?error=platform");
   }
-  const channel = await createLiveChannel({
-    workspaceId: ctx.workspace.id,
-    platform,
-    username,
-  });
+  let channel;
+  try {
+    channel = await createLiveChannel({
+      workspaceId: ctx.workspace.id,
+      platform,
+      username,
+      clipEveryMinutes: Number(formData.get("clipEveryMinutes") ?? 10),
+      minimumScore: Number(formData.get("minimumScore") ?? 70),
+      clipDuration: Number(formData.get("clipDuration") ?? 45),
+      autoCaption: formData.has("autoCaption") ? formData.get("autoCaption") === "on" : undefined,
+    });
+  } catch (error) {
+    redirect(`/studio/live?error=${encodeURIComponent(error instanceof Error ? error.message : "Falha ao adicionar canal")}`);
+  }
   revalidatePath("/studio/live");
   revalidatePath("/studio/live/channels");
   redirect(`/studio/live/${channel.id}`);

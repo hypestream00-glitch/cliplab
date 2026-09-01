@@ -42,3 +42,26 @@ export async function applyTemplateToClips(params: {
   }
   return clips.length;
 }
+
+export const TEMPLATE_CATEGORIES = ["Viral", "Gaming", "Podcast", "Streamer", "Clean", "News", "Meme", "Business"] as const;
+
+export async function createWorkspaceTemplate(params: {
+  workspaceId: string;
+  name: string;
+  category?: string;
+}) {
+  const name = params.name.trim().slice(0, 80);
+  if (name.length < 2) throw new Error("Informe um nome para o template.");
+  const category = TEMPLATE_CATEGORIES.includes(params.category as (typeof TEMPLATE_CATEGORIES)[number])
+    ? params.category
+    : "Clean";
+  return prisma.template.create({
+    data: {
+      workspaceId: params.workspaceId,
+      name,
+      canvas: { ratio: "9:16" },
+      layout: { category },
+      captionStyle: {},
+    },
+  });
+}

@@ -6,10 +6,13 @@ import { cleanupExpiredUploads } from "@/lib/uploads/session";
 import { socialPublishAllowed } from "@/lib/env/status";
 import { WORKER_SCHEDULER_INTERVAL_MS } from "@/lib/queue/consumers";
 import { releaseDueReferralRewards } from "@/lib/referral/release";
+import { isFeatureEnabled } from "@/lib/features/flags";
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let lastAnalyticsAt = 0;
+let lastLivePollAt = Date.now();
 const ANALYTICS_EVERY_MS = 15 * 60_000;
+const LIVE_POLL_EVERY_MS = 2 * 60_000;
 
 export function workerSchedulerActive() {
   return timer != null;
@@ -44,6 +47,7 @@ export async function runWorkerSchedulerTick() {
     logger.warn({ errType: error instanceof Error ? error.name : "Error" }, "affiliate reward release skipped");
   });
   await maybeSyncAnalyticsInProcess();
+  await maybePollLiveChannels();
   if (socialPublishAllowed()) {
     const { enqueueDueScheduledPublications } = await import("@/lib/services/publishing");
     await enqueueDueScheduledPublications().catch(() => undefined);
@@ -88,5 +92,17 @@ async function maybeSyncAnalyticsInProcess() {
     await persistTrendScores().catch(() => undefined);
   } catch (error) {
     logger.warn({ errType: error instanceof Error ? error.name : "Error" }, "in-process analytics sync skipped");
+  }
+}
+
+async function maybePollLiveChannels() {
+  if (!isFeatureEnabled("ENABLE_LIVE_CLIPPING")) return;
+  if (Date.now() - lastLivePollAt < LIVE_POLL_EVERY_MS) return;
+  lastLivePollAt = Date.now();
+  try {
+    const { pollMonitoredLiveChannels } = await import("@/lib/services/live-monitor");
+    await pollMonitoredLiveChannels();
+  } catch (error) {
+    logger.warn({ errType: error instanceof Error ? error.name : "Error" }, "live monitor poll skipped");
   }
 }

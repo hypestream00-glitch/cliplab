@@ -1,4 +1,4 @@
-import { envPresent, externalAiProcessingAllowed, socialPublishAllowed } from "@/lib/env/status";
+import { envFlagOrDefault, envPresent, socialPublishAllowed, externalAiProcessingAllowed } from "@/lib/env/status";
 import { isTikTokConfigured, tiktokContentPostingStatus } from "@/lib/social/tiktok/config";
 import { isMetaConfigured, metaPublishingStatus } from "@/lib/social/meta/config";
 import { isXConfigured, xPublishingAllowed } from "@/lib/social/x/config";
@@ -13,7 +13,12 @@ export type FeatureFlag =
   | "META_PUBLISHING"
   | "X_PUBLISHING"
   | "YOUTUBE_PUBLISHING"
-  | "STRIPE_BILLING";
+  | "STRIPE_BILLING"
+  | "ENABLE_LIVE_CLIPPING"
+  | "ENABLE_TRENDING_YOUTUBE"
+  | "ENABLE_TRENDING_TWITCH"
+  | "ENABLE_CHAMPIONSHIPS"
+  | "ENABLE_AUTOPOST";
 
 export function featureFlags(): Record<FeatureFlag, boolean> {
   const unified = isUploadPostPrimary() && isUploadPostConfigured();
@@ -30,6 +35,11 @@ export function featureFlags(): Record<FeatureFlag, boolean> {
     YOUTUBE_PUBLISHING:
       socialPublishAllowed() && (unified || (isYouTubeConfigured() && youtubeUploadStatus() === "AVAILABLE")),
     STRIPE_BILLING: isStripeTestReady(),
+    ENABLE_LIVE_CLIPPING: envFlagOrDefault("ENABLE_LIVE_CLIPPING", true),
+    ENABLE_TRENDING_YOUTUBE: envPresent("YOUTUBE_API_KEY") || envPresent("GOOGLE_API_KEY"),
+    ENABLE_TRENDING_TWITCH: envPresent("TWITCH_CLIENT_ID") && envPresent("TWITCH_CLIENT_SECRET"),
+    ENABLE_CHAMPIONSHIPS: envFlagOrDefault("ENABLE_CHAMPIONSHIPS", true),
+    ENABLE_AUTOPOST: envFlagOrDefault("ENABLE_AUTOPOST", true) && socialPublishAllowed(),
   };
 }
 

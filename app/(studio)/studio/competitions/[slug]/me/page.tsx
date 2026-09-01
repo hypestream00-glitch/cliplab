@@ -42,7 +42,7 @@ export default async function CompetitionMePage({ params }: PageParamsProps<{ sl
           </Link>
         }
       />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <article className="rounded-2xl border bg-card p-4">
           <p className="text-[12px] text-muted-foreground">Sua posição</p>
           <p className="mt-1 text-[20px] font-semibold">{mine?.position ?? "—"}</p>
@@ -50,6 +50,10 @@ export default async function CompetitionMePage({ params }: PageParamsProps<{ sl
         <article className="rounded-2xl border bg-card p-4">
           <p className="text-[12px] text-muted-foreground">Views válidas</p>
           <p className="mt-1 text-[20px] font-semibold">{formatNumber(mine?.validViews ?? 0)}</p>
+        </article>
+        <article className="rounded-2xl border bg-card p-4">
+          <p className="text-[12px] text-muted-foreground">Código de participação</p>
+          <p className="mt-1 font-mono text-[18px] font-semibold text-yellow-300">{participant.participantCode}</p>
         </article>
         <article className="rounded-2xl border bg-card p-4">
           <p className="text-[12px] text-muted-foreground">Prêmio estimado</p>

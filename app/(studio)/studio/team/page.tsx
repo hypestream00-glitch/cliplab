@@ -4,7 +4,6 @@ import { PageHeader, StatusBadge } from "@/components/dashboard/primitives";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { initials } from "@/lib/utils/format";
 import { inviteMemberAction } from "@/app/(studio)/studio/team/actions";
-import { DevNotice } from "@/components/dashboard/dev-notice";
 
 export const metadata = { title: "Equipe" };
 
@@ -22,12 +21,7 @@ export default async function TeamPage() {
   ]);
   return (
     <div>
-      <PageHeader title="Equipe" description="Convites são gravados no banco. E-mail de convite não é enviado sem provedor de e-mail." />
-      <div className="mb-4">
-        <DevNotice>
-          Colaboração persiste membros e convites. Não há aceite por e-mail nesta versão — o convite fica PENDING.
-        </DevNotice>
-      </div>
+      <PageHeader title="Equipe" description="Convide membros por e-mail. Sem provedor de e-mail, copie o link de aceite." />
       <form action={inviteMemberAction} className="mb-4 flex max-w-lg gap-2">
         <input name="email" type="email" required placeholder="email@empresa.com" className="h-8 flex-1 rounded-md border bg-transparent px-2 text-[13px]" />
         <select name="role" className="h-8 rounded-md border bg-transparent px-2 text-[13px]">
@@ -77,7 +71,10 @@ export default async function TeamPage() {
           <ul className="space-y-1 text-[13px] text-muted-foreground">
             {invitations.map((invite) => (
               <li key={invite.id}>
-                {invite.email} · {invite.role} · expira {invite.expiresAt.toLocaleDateString("pt-BR")}
+                {invite.email} · {invite.role} · expira {invite.expiresAt.toLocaleDateString("pt-BR")} ·{" "}
+                <a className="text-primary" href={`/studio/team/accept?token=${invite.token}`}>
+                  link de aceite
+                </a>
               </li>
             ))}
           </ul>

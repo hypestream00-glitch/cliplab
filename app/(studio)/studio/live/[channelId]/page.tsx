@@ -39,7 +39,7 @@ export default async function LiveChannelPage({
         <p className="mb-3 text-[12px] text-destructive">Autopublish exige consentimento explícito.</p>
       ) : null}
       <DevNotice>
-        Monitoramento em desenvolvimento não conecta à API da plataforma. Ligar o interruptor só persiste a preferência.
+        Status de live na Twitch usa a API Helix quando TWITCH_CLIENT_ID e TWITCH_CLIENT_SECRET estão configurados. Kick e YouTube permanecem offline até haver API oficial. O CortaClip não baixa nem recorta a transmissão automaticamente nesta versão.
       </DevNotice>
       <dl className="mt-4 grid grid-cols-2 gap-3 rounded-lg border p-4 text-[13px] md:grid-cols-4">
         <div>

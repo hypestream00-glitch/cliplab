@@ -22,6 +22,7 @@ import { ProcessingPipeline } from "@/components/projects/processing-pipeline";
 import { ConfirmSubmit } from "@/components/ui/confirm-submit";
 import { friendlyError } from "@/lib/ui/friendly-error";
 import { visibleClipWhere } from "@/lib/data/visibility";
+import { ViralScorePanel } from "@/components/clips/viral-score-panel";
 
 export default async function ClipPage({
   params,
@@ -88,16 +89,7 @@ export default async function ClipPage({
         {clip.score ? (
           <div className="mt-4">
             <ScoreBadge score={clip.score.overall} />
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-5">
-              <div className="rounded-xl border p-2">Hook {clip.score.hookScore}</div>
-              <div className="rounded-xl border p-2">Clareza {clip.score.clarityScore}</div>
-              <div className="rounded-xl border p-2">Engajamento {clip.score.retentionScore}</div>
-              <div className="rounded-xl border p-2">Emoção {clip.score.emotionScore}</div>
-              <div className="rounded-xl border p-2">Potencial {clip.score.shareabilityScore}</div>
-            </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Score estimado pela análise de IA. Não é garantia de performance.
-            </p>
+            <ViralScorePanel score={clip.score} durationMs={clip.durationMs} />
           </div>
         ) : null}
         <ClipSuggestionsForm

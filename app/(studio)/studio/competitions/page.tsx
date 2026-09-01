@@ -5,16 +5,30 @@ import { PageHeader, EmptyState } from "@/components/dashboard/primitives";
 import { CompetitionStatusBadge } from "@/components/competitions/status-badge";
 import { formatBrlFromCents } from "@/lib/competitions/prizes";
 import { formatDate } from "@/lib/utils/format";
+import type { PageSearchProps } from "@/types/routes";
 import { publicCompetitionStatuses } from "@/lib/competitions/status";
 import { refreshCompetitionStatuses } from "@/lib/competitions/admin";
 
 export const metadata = { title: "Campeonatos" };
 
-export default async function CompetitionsPage() {
-  await requireWorkspaceContext();
+export default async function CompetitionsPage({ searchParams }: PageSearchProps) {
+  const ctx = await requireWorkspaceContext();
   await refreshCompetitionStatuses();
+  const params = await searchParams;
+  const tab = typeof params.tab === "string" ? params.tab : "ativos";
+  const statusFilter =
+    tab === "em-breve"
+      ? (["SCHEDULED"] as const)
+      : tab === "encerrados"
+        ? (["FINALIZING", "FINISHED"] as const)
+        : tab === "minhas"
+          ? publicCompetitionStatuses()
+          : (["ACTIVE"] as const);
   const items = await prisma.competition.findMany({
-    where: { status: { in: [...publicCompetitionStatuses()] } },
+    where:
+      tab === "minhas"
+        ? { participants: { some: { userId: ctx.user.id } } }
+        : { status: { in: [...statusFilter] } },
     orderBy: [{ status: "asc" }, { startsAt: "desc" }],
     include: {
       _count: { select: { participants: true, submissions: true } },
@@ -38,6 +52,22 @@ export default async function CompetitionsPage() {
         title="🏆 Campeonatos de Clipadores"
         description="Crie clips, publique nas suas redes e dispute premiações."
       />
+      <nav className="mb-4 flex flex-wrap gap-2 text-[13px]">
+        {[
+          ["ativos", "Ativos"],
+          ["em-breve", "Em breve"],
+          ["encerrados", "Encerrados"],
+          ["minhas", "Minhas participações"],
+        ].map(([id, label]) => (
+          <Link
+            key={id}
+            href={`/studio/competitions?tab=${id}`}
+            className={`rounded-xl border px-3 py-1.5 ${tab === id ? "border-gold/50 bg-gold/10 text-white" : "border-border text-muted-foreground"}`}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
       {items.length === 0 ? (
         <EmptyState
           title="Nenhum campeonato aberto agora."
@@ -68,7 +98,7 @@ export default async function CompetitionsPage() {
                     {item._count.participants} participantes · {views.toLocaleString("pt-BR")} views · {item.allowedPlatforms.join(", ")}
                   </p>
                   <Link href={`/studio/competitions/${item.slug}`} className="mt-4 inline-flex h-10 items-center rounded-xl gradient-brand px-4 text-[13px] font-semibold text-white">
-                    Ver campeonato
+                    {tab === "encerrados" ? "Ver campeonato" : "Participar"}
                   </Link>
                 </div>
               </article>

@@ -93,6 +93,7 @@ export function StatusBadge({ status }: { status: string }) {
     REAUTH_REQUIRED: "bg-amber-500/15 text-amber-200",
     CONFIGURATION_REQUIRED: "bg-amber-500/15 text-amber-200",
     EXPIRED: "bg-red-500/15 text-red-300",
+    CHECKING: "bg-sky-500/15 text-sky-300",
     ERROR: "bg-red-500/15 text-red-300",
     UPLOADING: "bg-sky-500/15 text-sky-300",
     DRAFT: "bg-muted text-muted-foreground",

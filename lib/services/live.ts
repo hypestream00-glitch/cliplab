@@ -1,11 +1,25 @@
 import { prisma } from "@/lib/db/prisma";
 import type { SocialPlatform } from "@/generated/prisma/client";
+import { getPlanLimits } from "@/lib/config/plans";
+import { getWorkspacePlanCode } from "@/lib/billing/usage";
+import { isFeatureEnabled } from "@/lib/features/flags";
 
 export async function createLiveChannel(params: {
   workspaceId: string;
   platform: SocialPlatform;
   username: string;
+  clipEveryMinutes?: number;
+  minimumScore?: number;
+  clipDuration?: number;
+  autoCaption?: boolean;
 }) {
+  if (!isFeatureEnabled("ENABLE_LIVE_CLIPPING")) {
+    throw new Error("Clipping ao vivo está desativado neste ambiente.");
+  }
+  const limits = getPlanLimits(await getWorkspacePlanCode(params.workspaceId));
+  if (!limits.liveClipping) {
+    throw new Error("Clipping ao vivo está disponível no plano Pro.");
+  }
   const username = params.username.replace(/^@/, "").trim();
   if (!username) throw new Error("Informe o usuário do canal");
   return prisma.liveChannel.create({
@@ -17,6 +31,10 @@ export async function createLiveChannel(params: {
       monitoringEnabled: false,
       autoPublish: false,
       status: "OFFLINE",
+      clipEveryMinutes: params.clipEveryMinutes ?? 10,
+      minimumScore: params.minimumScore ?? 70,
+      clipDuration: params.clipDuration ?? 45,
+      autoCaption: params.autoCaption ?? true,
     },
   });
 }
