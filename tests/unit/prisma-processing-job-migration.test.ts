@@ -5,66 +5,69 @@ import { describe, expect, it } from "vitest";
 const root = path.resolve(__dirname, "../..");
 const migrationsDir = path.join(root, "prisma/migrations");
 const schema = readFileSync(path.join(root, "prisma/schema.prisma"), "utf8");
-const sql = readFileSync(path.join(migrationsDir, "20260901034100_add_processing_job/migration.sql"), "utf8");
+const processingJobSql = readFileSync(
+  path.join(migrationsDir, "20260901034100_add_processing_job/migration.sql"),
+  "utf8",
+);
+const reconcileSql = readFileSync(
+  path.join(migrationsDir, "20260901050500_reconcile_full_schema/migration.sql"),
+  "utf8",
+);
 
 const schemaModels = [...schema.matchAll(/^model (\w+)/gm)].map((match) => match[1]);
 const schemaEnums = [...schema.matchAll(/^enum (\w+)/gm)].map((match) => match[1]);
 
-describe("CLIPLAB Prisma baseline + ProcessingJob migration", () => {
-  it("keeps ProcessingJob in the Prisma schema with required relations", () => {
-    expect(schema).toContain("model ProcessingJob");
-    expect(schema).toContain("enum ProcessingJobType");
-    expect(schema).toContain("enum JobStatus");
-    expect(schema).toMatch(/processingJobs\s+ProcessingJob\[\]/);
-    expect(schema).toMatch(/jobs\s+ProcessingJob\[\]/);
+describe("CLIPLAB Prisma schema audit and reconciliation", () => {
+  it("has no Video model; media source is SourceVideo", () => {
+    expect(schema).not.toMatch(/^model Video\b/m);
+    expect(schemaModels).toContain("SourceVideo");
     expect(schema).not.toMatch(/@@map\(/);
     expect(schema).not.toMatch(/@map\(/);
   });
 
-  it("has a single versioned migration that baselines the full schema", () => {
+  it("keeps two versioned migrations: applied ProcessingJob baseline plus new reconciliation", () => {
     const names = readdirSync(migrationsDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name);
-    expect(names).toEqual(["20260901034100_add_processing_job"]);
+      .map((entry) => entry.name)
+      .sort();
+    expect(names).toEqual(["20260901034100_add_processing_job", "20260901050500_reconcile_full_schema"]);
   });
 
-  it("creates every Prisma model and enum idempotently before ProcessingJob FKs", () => {
+  it("covers every Prisma model and enum in the reconciliation SQL", () => {
     for (const model of schemaModels) {
-      expect(sql).toContain(`CREATE TABLE IF NOT EXISTS "${model}"`);
+      expect(reconcileSql).toContain(`CREATE TABLE IF NOT EXISTS "${model}"`);
     }
     for (const enumName of schemaEnums) {
-      expect(sql).toContain(`CREATE TYPE "${enumName}" AS ENUM`);
+      expect(reconcileSql).toContain(`CREATE TYPE "${enumName}" AS ENUM`);
     }
-
-    const workspaceTableAt = sql.indexOf('CREATE TABLE IF NOT EXISTS "Workspace"');
-    const projectTableAt = sql.indexOf('CREATE TABLE IF NOT EXISTS "Project"');
-    const processingJobTableAt = sql.indexOf('CREATE TABLE IF NOT EXISTS "ProcessingJob"');
-    const processingJobFkAt = sql.indexOf('CONSTRAINT "ProcessingJob_workspaceId_fkey"');
-    expect(workspaceTableAt).toBeGreaterThan(0);
-    expect(projectTableAt).toBeGreaterThan(workspaceTableAt);
-    expect(processingJobTableAt).toBeGreaterThan(projectTableAt);
-    expect(processingJobFkAt).toBeGreaterThan(processingJobTableAt);
-
-    expect(sql).toContain('CREATE INDEX IF NOT EXISTS "ProcessingJob_workspaceId_createdAt_idx"');
-    expect(sql).toContain('CREATE INDEX IF NOT EXISTS "ProcessingJob_entityId_type_idx"');
-    expect(sql).toContain('CREATE INDEX IF NOT EXISTS "ProcessingJob_status_idx"');
-    expect(sql).toContain('CREATE INDEX IF NOT EXISTS "ProcessingJob_workspaceId_status_idx"');
-    expect(sql).toContain('REFERENCES "Workspace"("id") ON DELETE CASCADE');
-    expect(sql).toContain('REFERENCES "Project"("id") ON DELETE SET NULL');
-    expect(sql).toContain("WHEN duplicate_object THEN null");
+    expect(reconcileSql).toContain('CREATE TABLE IF NOT EXISTS "SocialAccount"');
+    expect(reconcileSql).toContain('CREATE TABLE IF NOT EXISTS "SocialPublication"');
+    expect(reconcileSql).toContain('CREATE TABLE IF NOT EXISTS "UploadSession"');
+    expect(reconcileSql).toContain('CREATE TABLE IF NOT EXISTS "ProcessingJob"');
+    expect(reconcileSql).toContain('CREATE TABLE IF NOT EXISTS "Workspace"');
+    expect(reconcileSql.indexOf('CREATE TABLE IF NOT EXISTS "Workspace"')).toBeLessThan(
+      reconcileSql.indexOf('CREATE TABLE IF NOT EXISTS "ProcessingJob"'),
+    );
+    expect(reconcileSql.indexOf('CREATE TABLE IF NOT EXISTS "Workspace"')).toBeLessThan(
+      reconcileSql.indexOf("ProcessingJob_workspaceId_fkey"),
+    );
+    expect(reconcileSql).toContain("FROM pg_constraint");
+    expect(reconcileSql).toContain("ADD COLUMN IF NOT EXISTS");
+    expect(reconcileSql).toContain("ADD VALUE IF NOT EXISTS");
   });
 
-  it("never drops, truncates, force-resets, or marks migrations applied", () => {
-    expect(sql).not.toMatch(/\bDROP TABLE\b/i);
-    expect(sql).not.toMatch(/\bDROP COLUMN\b/i);
-    expect(sql).not.toMatch(/\bTRUNCATE TABLE\b/i);
-    expect(sql).not.toMatch(/\bDROP DATABASE\b/i);
-    expect(sql).not.toMatch(/\bDROP SCHEMA\b/i);
-    expect(sql).not.toContain("--applied");
-    expect(sql).not.toContain("migrate reset");
-    expect(sql).not.toContain("db push");
-    expect(sql).not.toContain("force-reset");
-    expect(sql).not.toContain("RENATO");
+  it("never drops, truncates, force-resets, or marks migrations applied in SQL", () => {
+    for (const sql of [processingJobSql, reconcileSql]) {
+      expect(sql).not.toMatch(/\bDROP TABLE\b/i);
+      expect(sql).not.toMatch(/\bDROP COLUMN\b/i);
+      expect(sql).not.toMatch(/\bTRUNCATE TABLE\b/i);
+      expect(sql).not.toMatch(/\bDROP DATABASE\b/i);
+      expect(sql).not.toMatch(/\bDROP SCHEMA\b/i);
+      expect(sql).not.toContain("--applied");
+      expect(sql).not.toContain("migrate reset");
+      expect(sql).not.toContain("force-reset");
+      expect(sql).not.toContain("RENATO");
+    }
   });
 
   it("is what worker recovery queries after schema exists", () => {

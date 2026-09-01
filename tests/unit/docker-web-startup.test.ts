@@ -31,7 +31,7 @@ describe("Railway web image", () => {
     expect(startWeb).not.toContain("workers/index");
   });
 
-  it("runs prisma migrate deploy before Next.js, with P3009/P3018/P3005 recovery only for ProcessingJob", () => {
+  it("runs prisma migrate deploy before Next.js, with P3009/P3018/P3005 recovery for known migrations", () => {
     expect(pkg.scripts["db:deploy"]).toBe("prisma migrate deploy");
     expect(pkg.dependencies.prisma).toBe("^7.10.0");
     expect(pkg.dependencies["@prisma/client"]).toBe("^7.10.0");
@@ -45,6 +45,7 @@ describe("Railway web image", () => {
     expect(startWeb).not.toContain("npm install");
     const migrateHelper = readFileSync("scripts/prisma-migrate-production.mjs", "utf8");
     expect(migrateHelper).toContain('KNOWN_RECOVERABLE_MIGRATION = "20260901034100_add_processing_job"');
+    expect(migrateHelper).toContain('RECONCILE_MIGRATION = "20260901050500_reconcile_full_schema"');
     expect(migrateHelper).toContain('"--rolled-back"');
     expect(migrateHelper).toContain("shouldRecoverKnownFailedMigration");
     expect(migrateHelper).toContain("P3018");

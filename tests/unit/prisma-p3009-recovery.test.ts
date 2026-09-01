@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   KNOWN_RECOVERABLE_MIGRATION,
+  RECONCILE_MIGRATION,
   collectFailedMigrationNames,
   runProductionMigrations,
   shouldRecoverKnownFailedMigration,
@@ -231,8 +232,12 @@ describe("P3009 known ProcessingJob recovery", () => {
           }
           return { status: 0, stdout: "No pending migrations\n", stderr: "" };
         }
-        expect(prismaArgs).toEqual(["migrate", "resolve", "--applied", KNOWN_RECOVERABLE_MIGRATION]);
-        return { status: 0, stdout: "Migration marked as applied\n", stderr: "" };
+        if (prismaArgs[0] === "migrate" && prismaArgs[1] === "resolve") {
+          expect(prismaArgs[2]).toBe("--applied");
+          expect([KNOWN_RECOVERABLE_MIGRATION, RECONCILE_MIGRATION]).toContain(prismaArgs[3]);
+          return { status: 0, stdout: "Migration marked as applied\n", stderr: "" };
+        }
+        throw new Error(`unexpected prisma args: ${prismaArgs.join(" ")}`);
       },
       log: (line: string) => logs.push(line),
       fail: (line: string) => logs.push(line),
@@ -243,8 +248,11 @@ describe("P3009 known ProcessingJob recovery", () => {
     expect(calls[0]).toEqual(["migrate", "deploy"]);
     expect(calls[1]?.[0]).toBe("db");
     expect(calls[1]?.[1]).toBe("execute");
-    expect(calls[2]).toEqual(["migrate", "resolve", "--applied", KNOWN_RECOVERABLE_MIGRATION]);
-    expect(calls[3]).toEqual(["migrate", "deploy"]);
+    expect(calls[2]?.[0]).toBe("db");
+    expect(calls[2]?.[1]).toBe("execute");
+    expect(calls[3]).toEqual(["migrate", "resolve", "--applied", KNOWN_RECOVERABLE_MIGRATION]);
+    expect(calls[4]).toEqual(["migrate", "resolve", "--applied", RECONCILE_MIGRATION]);
+    expect(calls[5]).toEqual(["migrate", "deploy"]);
     expect(logs).toContain("P3005 EXISTING DATABASE DETECTED");
     expect(logs).toContain("PRISMA BASELINE SQL: OK");
     expect(logs).toContain("PRISMA MIGRATE RESOLVE: APPLIED after SQL succeeded");
