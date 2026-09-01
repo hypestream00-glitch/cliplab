@@ -23,4 +23,20 @@ describe("Railway web image", () => {
     expect(startWeb).not.toContain("127.0.0.1");
     expect(startWeb).not.toContain("workers/index");
   });
+
+  it("runs prisma migrate deploy once before Next.js and never uses destructive prisma commands", () => {
+    expect(pkg.scripts["db:deploy"]).toBe("prisma migrate deploy");
+    expect(startWeb).toContain('"migrate", "deploy"');
+    expect(startWeb).toContain("PRISMA MIGRATE DEPLOY: START");
+    expect(startWeb.indexOf("runPrismaMigrateDeploy()")).toBeLessThan(startWeb.indexOf("spawn(process.execPath, args"));
+    expect(startWeb).not.toContain("migrate dev");
+    expect(startWeb).not.toContain("migrate reset");
+    expect(startWeb).not.toContain("db push");
+    expect(dockerfile).toContain("prisma.config.ts");
+    expect(dockerfile).toContain("node_modules/prisma");
+    expect(dockerfile).toContain("node_modules/@prisma");
+    expect(dockerfile).not.toContain("migrate reset");
+    expect(dockerfile).not.toContain("db push");
+    expect(dockerfile).not.toContain("migrate dev");
+  });
 });

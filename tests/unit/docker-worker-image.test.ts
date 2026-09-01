@@ -14,6 +14,10 @@ describe("Railway worker image", () => {
     expect(dockerfile).not.toContain("next start");
     expect(dockerfile).not.toContain("start-web.mjs");
     expect(dockerfile).not.toContain("EXPOSE");
+    expect(dockerfile).not.toContain("migrate deploy");
+    expect(dockerfile).not.toContain("migrate dev");
+    expect(dockerfile).not.toContain("migrate reset");
+    expect(dockerfile).not.toContain("db push");
   });
 
   it("starts compiled JS in production and keeps a local tsx fallback", () => {
@@ -28,6 +32,9 @@ describe("Railway worker image", () => {
     expect(startWorker).not.toContain("next");
     expect(startWorker).not.toContain("env: process.env");
     expect(startWorker).not.toContain("dotenv");
+    expect(startWorker).not.toContain("migrate deploy");
+    expect(startWorker).not.toContain("migrate reset");
+    expect(startWorker).not.toContain("db push");
   });
 
   it("does not inline process.env at worker bundle time", () => {
