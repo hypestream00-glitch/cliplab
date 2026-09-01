@@ -4,6 +4,7 @@ import { createPublishWorker } from "@/workers/social-publishing";
 import { createBulkDownloadWorker } from "@/workers/bulk-download";
 import { createAnalyticsWorker } from "@/workers/analytics";
 import { createInfraProbeWorker } from "@/workers/infra-probe";
+import { createHealthcheckWorker } from "@/workers/healthcheck";
 import { recoverPersistedJobs } from "@/lib/services/job-recovery";
 import { enqueueDueScheduledPublications } from "@/lib/services/publishing";
 import { shouldEmbedWorkers } from "@/lib/queue/runtime";
@@ -26,6 +27,7 @@ export function startClipLabWorkers() {
   createBulkDownloadWorker();
   createAnalyticsWorker();
   createInfraProbeWorker();
+  createHealthcheckWorker();
   void recoverPersistedJobs().catch((error) => logger.warn({ err: error }, "initial job recovery failed"));
   void beatWorker().catch(() => undefined);
   if (!scheduleTimer) {

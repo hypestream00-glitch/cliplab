@@ -88,6 +88,16 @@ describe("retry, recovery, idempotency", () => {
     ).toBe(false);
     expect(
       shouldRecoverPersistedJob({
+        status: "ACTIVE",
+        createdAt: startedAt,
+        startedAt,
+        workerStatus: "CONNECTED",
+        bullJobLive: false,
+        now,
+      }),
+    ).toBe(true);
+    expect(
+      shouldRecoverPersistedJob({
         status: "COMPLETED",
         createdAt: startedAt,
         startedAt,

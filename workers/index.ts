@@ -26,6 +26,13 @@ async function boot() {
   logger.info("CLIPLAB worker process started");
 }
 
+process.on("unhandledRejection", (reason) => {
+  logger.error({ err: reason }, "unhandledRejection");
+});
+process.on("uncaughtException", (error) => {
+  logger.error({ err: error }, "uncaughtException");
+});
+
 async function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;

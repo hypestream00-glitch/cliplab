@@ -21,6 +21,7 @@ export const QUEUE_NAMES = [
   "notifications",
   "bulk-download",
   "infra-probe",
+  "healthcheck",
 ] as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[number];
@@ -161,8 +162,25 @@ export function createWorker(name: QueueName, processor: (payload: JobPayload) =
   worker.on("error", (error) => {
     logger.warn({ err: error, queue: name }, "bullmq worker error");
   });
+  worker.on("failed", (job, error) => {
+    logger.warn({ err: error, queue: name, jobId: job?.id }, "bullmq job failed");
+    const payload = job?.data as JobPayload | undefined;
+    if (!payload?.jobId) return;
+    if (name === "healthcheck" || name === "infra-probe") return;
+    const attempts = job?.opts?.attempts ?? QUEUE_RETRY.attempts;
+    if ((job?.attemptsMade ?? 0) < attempts) return;
+    void markPersistedJobFailed(payload.jobId).catch(() => undefined);
+  });
   workers.push(worker);
   return worker;
+}
+
+async function markPersistedJobFailed(jobId: string) {
+  const { prisma } = await import("@/lib/db/prisma");
+  await prisma.processingJob.updateMany({
+    where: { id: jobId, status: { in: ["WAITING", "DELAYED", "ACTIVE"] } },
+    data: { status: "FAILED", message: "Job falhou após retries", finishedAt: new Date() },
+  });
 }
 
 export async function closeQueueRuntime() {
