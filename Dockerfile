@@ -37,12 +37,12 @@ ENV CLIPLAB_EMBED_WORKERS=false
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/package-lock.json ./package-lock.json
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/generated ./generated
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/scripts/start-web.mjs ./scripts/start-web.mjs
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/postgres ./node_modules/postgres
+RUN npm ci --omit=dev --ignore-scripts
 EXPOSE 3000
 CMD ["node", "scripts/start-web.mjs"]
