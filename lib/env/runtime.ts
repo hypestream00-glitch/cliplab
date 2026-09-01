@@ -10,6 +10,6 @@ export function runtimeEnvPresent(name: string): boolean {
 }
 
 export function logWorkerEnvPresence() {
-  console.log(`REDIS_URL PRESENT: ${runtimeEnvPresent("REDIS_URL")}`);
-  console.log(`DATABASE_URL PRESENT: ${runtimeEnvPresent("DATABASE_URL")}`);
+  process.stdout.write(`REDIS_URL PRESENT: ${runtimeEnvPresent("REDIS_URL")}\n`);
+  process.stdout.write(`DATABASE_URL PRESENT: ${runtimeEnvPresent("DATABASE_URL")}\n`);
 }

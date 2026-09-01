@@ -23,6 +23,8 @@ describe("Railway worker image", () => {
     expect(startWorker).toContain("dist");
     expect(startWorker).toContain("worker.mjs");
     expect(startWorker).toContain("tsx");
+    expect(startWorker).toContain("WORKER ENTRYPOINT STARTED");
+    expect(startWorker).toContain("await import");
     expect(startWorker).not.toContain("next");
     expect(startWorker).not.toContain("env: process.env");
     expect(startWorker).not.toContain("dotenv");

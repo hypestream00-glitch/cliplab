@@ -6,8 +6,9 @@ import { QUEUE_NAMES } from "@/lib/queue";
 describe("worker ready banner", () => {
   it("prints component status without secrets", () => {
     const lines: string[] = [];
-    const spy = vi.spyOn(console, "log").mockImplementation((message: unknown) => {
-      lines.push(String(message));
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+      lines.push(String(chunk).replace(/\n$/, ""));
+      return true;
     });
     const input = {
       redisConfigured: true,
@@ -18,14 +19,7 @@ describe("worker ready banner", () => {
     };
     logWorkerReadyBanner(input, true);
     spy.mockRestore();
-    expect(lines).toEqual([
-      "WORKER STARTED",
-      "DATABASE: OK",
-      "REDIS: OK",
-      "BULLMQ: READY",
-      "FFMPEG: OK",
-      "WORKER READY",
-    ]);
+    expect(lines).toEqual(["DATABASE: OK", "REDIS: OK", "BULLMQ: READY", "FFMPEG: OK", "WORKER READY"]);
     expect(workerComponentLines({ ...input, databaseOk: false }).database).toBe("FAIL");
     expect(lines.join("\n")).not.toMatch(/postgresql:\/\/|rediss:\/\//i);
   });

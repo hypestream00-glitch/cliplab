@@ -33,12 +33,25 @@ export function workerComponentLines(input: WorkerPreflightInput) {
 
 export function logWorkerReadyBanner(input: WorkerPreflightInput, ready: boolean) {
   const lines = workerComponentLines(input);
-  console.log("WORKER STARTED");
-  console.log(`DATABASE: ${lines.database}`);
-  console.log(`REDIS: ${lines.redis}`);
-  console.log(`BULLMQ: ${lines.bullmq}`);
-  console.log(`FFMPEG: ${lines.ffmpeg}`);
-  if (ready) console.log("WORKER READY");
+  process.stdout.write(`DATABASE: ${lines.database}\n`);
+  process.stdout.write(`REDIS: ${lines.redis}\n`);
+  process.stdout.write(`BULLMQ: ${lines.bullmq}\n`);
+  process.stdout.write(`FFMPEG: ${lines.ffmpeg}\n`);
+  if (ready) process.stdout.write("WORKER READY\n");
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timeout`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 export async function collectWorkerPreflightInput(): Promise<WorkerPreflightInput> {
@@ -51,7 +64,7 @@ export async function collectWorkerPreflightInput(): Promise<WorkerPreflightInpu
   let redisPingOk = false;
   if (isRedisConfigured()) {
     try {
-      redisPingOk = (await getSharedRedis()?.ping()) === "PONG";
+      redisPingOk = (await withTimeout(getSharedRedis()?.ping() ?? Promise.resolve(null), 8_000, "redis ping")) === "PONG";
     } catch {
       redisPingOk = false;
     }
@@ -59,19 +72,25 @@ export async function collectWorkerPreflightInput(): Promise<WorkerPreflightInpu
 
   let databaseOk = false;
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await withTimeout(prisma.$queryRaw`SELECT 1`, 8_000, "database ping");
     databaseOk = true;
   } catch {
     databaseOk = false;
   }
 
   const production = isProductionRuntime();
+  let ffmpegOk = false;
+  try {
+    ffmpegOk = await withTimeout(isFfmpegAvailable(), 10_000, "ffmpeg");
+  } catch {
+    ffmpegOk = false;
+  }
   return {
     redisConfigured: isRedisConfigured(),
     redisPingOk,
     databaseOk,
     storageOk: production ? s3Configured() : true,
-    ffmpegOk: await isFfmpegAvailable(),
+    ffmpegOk,
   };
 }
 

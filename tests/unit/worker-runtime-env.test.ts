@@ -36,8 +36,9 @@ describe("worker runtime env", () => {
     vi.stubEnv("REDIS_URL", "rediss://example");
     vi.stubEnv("DATABASE_URL", "postgresql://example");
     const lines: string[] = [];
-    const spy = vi.spyOn(console, "log").mockImplementation((message: unknown) => {
-      lines.push(String(message));
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+      lines.push(String(chunk).replace(/\n$/, ""));
+      return true;
     });
     logWorkerEnvPresence();
     spy.mockRestore();
@@ -51,7 +52,18 @@ describe("start-worker env preservation", () => {
     const source = readFileSync(path.join(root, "scripts/start-worker.mjs"), "utf8");
     expect(source).not.toContain("env: process.env");
     expect(source).not.toContain("dotenv");
-    expect(source).toContain("stdio: \"inherit\"");
+    expect(source).toContain("WORKER ENTRYPOINT STARTED");
+    expect(source).toContain("pathToFileURL");
+  });
+
+  it("loads the compiled worker in-process so boot logs are not trapped in a child", () => {
+    const source = readFileSync(path.join(root, "scripts/start-worker.mjs"), "utf8");
+    expect(source).toContain("await import(pathToFileURL(compiled).href)");
+    expect(source).not.toMatch(/spawn\(process\.execPath,\s*\[compiled/);
+    const index = readFileSync(path.join(root, "workers/index.ts"), "utf8");
+    expect(index).toContain('bootLog("WORKER STARTED")');
+    expect(index).toContain('await import("@/lib/queue/boot")');
+    expect(index).not.toMatch(/import\s+\{[^}]*startClipLabWorkers/);
   });
 
   it("reports REDIS_URL and DATABASE_URL present without connecting", () => {
@@ -81,11 +93,14 @@ describe("start-worker env preservation", () => {
       },
     });
     const output = `${result.stdout}\n${result.stderr}`;
+    expect(output).toMatch(/WORKER ENTRYPOINT STARTED/);
+    expect(output).toMatch(/WORKER STARTED/);
+    expect(output).toMatch(/WORKER BUILD:/);
     expect(output).toMatch(/REDIS_URL PRESENT: true/);
     expect(output).toMatch(/DATABASE_URL PRESENT: true/);
     expect(output).not.toMatch(/rediss:\/\/example/);
     expect(output).not.toMatch(/postgresql:\/\/example/);
-    expect(output).not.toMatch(/WORKER PREFLIGHT/);
+    expect(output).not.toMatch(/WORKER PREFLIGHT FAIL/);
     expect(result.status).toBe(0);
   });
 });

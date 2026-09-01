@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import path from "node:path";
@@ -23,7 +24,17 @@ function resolveAtImport(spec) {
   return `${base}.ts`;
 }
 
+function workerBuildId() {
+  const fromEnv = (process.env.RAILWAY_GIT_COMMIT_SHA || process.env.SOURCE_COMMIT || "").trim();
+  if (fromEnv) return fromEnv.slice(0, 12);
+  const git = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" });
+  if (git.status === 0 && git.stdout.trim()) return git.stdout.trim().slice(0, 12);
+  return "unknown";
+}
+
 mkdirSync(path.join(root, "dist"), { recursive: true });
+
+const buildId = workerBuildId();
 
 await esbuild.build({
   absWorkingDir: root,
@@ -36,7 +47,9 @@ await esbuild.build({
   packages: "external",
   sourcemap: false,
   logLevel: "info",
-  // Never define process.env.* here. REDIS_URL / DATABASE_URL / S3_* must stay runtime reads.
+  banner: {
+    js: `globalThis.__CLIPLAB_WORKER_BUILD__ = ${JSON.stringify(buildId)};`,
+  },
   plugins: [
     {
       name: "alias-at",
