@@ -192,9 +192,21 @@ export function createWorker(name: QueueName, processor: (payload: JobPayload) =
 
 async function markPersistedJobFailed(jobId: string) {
   const { prisma } = await import("@/lib/db/prisma");
+  const row = await prisma.processingJob.findUnique({
+    where: { id: jobId },
+    select: { projectId: true, errorMessage: true, message: true },
+  });
   await prisma.processingJob.updateMany({
     where: { id: jobId, status: { in: ["WAITING", "DELAYED", "ACTIVE"] } },
     data: { status: "FAILED", message: "Job falhou após retries", finishedAt: new Date() },
+  });
+  if (!row?.projectId) return;
+  await prisma.project.updateMany({
+    where: { id: row.projectId, status: { notIn: ["READY", "FAILED", "CANCELED"] } },
+    data: {
+      status: "FAILED",
+      errorMessage: row.errorMessage || row.message || "A importação demorou mais que o permitido.",
+    },
   });
 }
 

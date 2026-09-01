@@ -11,7 +11,7 @@ import type { ClipMode } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
   const requestId = newRequestId();
@@ -62,6 +62,7 @@ export async function POST(request: Request) {
       generateDescription: parsed.data.generateDescription,
       generateHashtags: parsed.data.generateHashtags,
       outputAspect: parsed.data.outputAspect,
+      authorized: parsed.data.authorized === true,
     });
     return NextResponse.json({ projectId: project.id, requestId });
   } catch (error) {

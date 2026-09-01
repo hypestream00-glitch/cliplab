@@ -38,6 +38,9 @@ export async function createProject(params: {
   generateDescription: boolean;
   generateHashtags: boolean;
   outputAspect?: OutputAspect;
+  authorized?: boolean;
+  sourceProvider?: string;
+  externalId?: string;
 }) {
   if (params.sourceKind === "UPLOAD" && !params.storageKey) {
     throw new InvalidVideoError("Selecione um arquivo de vídeo.");
@@ -47,7 +50,8 @@ export async function createProject(params: {
       const { assertSafeIngestUrl } = await import("@/lib/security/ssrf");
       assertSafeIngestUrl(params.sourceUrl);
     }
-    if (!params.storageKey) {
+    const pendingDirectImport = params.sourceKind === "DIRECT_URL" && Boolean(params.sourceUrl) && !params.storageKey;
+    if (!params.storageKey && !pendingDirectImport) {
       throw new UrlIngestNotSupportedError();
     }
   }
@@ -73,7 +77,7 @@ export async function createProject(params: {
       generateTitle: params.generateTitle,
       generateDescription: params.generateDescription,
       generateHashtags: params.generateHashtags,
-      authorized: true,
+      authorized: params.authorized !== false,
       creditsUsed: 0,
       pipelineMeta: {
         video: "pending",
@@ -81,6 +85,15 @@ export async function createProject(params: {
         analysis: "pending",
         render: "pending",
         targetAspect: parseOutputAspect(params.outputAspect),
+        ingest: params.storageKey ? "ready" : "queued",
+        ...(params.sourceKind !== "UPLOAD"
+          ? {
+              sourceType: "URL",
+              sourceProvider: params.sourceProvider ?? params.sourceKind,
+              externalId: params.externalId ?? null,
+              rightsConfirmedAt: params.authorized !== false ? new Date().toISOString() : null,
+            }
+          : {}),
       },
       sourceVideo: {
         create: {

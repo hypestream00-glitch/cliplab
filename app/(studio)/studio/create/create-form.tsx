@@ -51,7 +51,7 @@ function formPayload(form: HTMLFormElement, filename: string) {
     generateTitle: data.get("generateTitle") === "on",
     generateDescription: data.get("generateDescription") === "on",
     generateHashtags: data.get("generateHashtags") === "on",
-    authorized: true,
+    authorized: data.get("authorized") === "on",
     outputAspect: String(data.get("outputAspect") || "9:16"),
   };
 }
@@ -106,6 +106,8 @@ export function CreateProjectForm({
     durationSeconds: number | null;
     platformLabel: string;
     ingestSupported: boolean;
+    metadataSupported?: boolean;
+    availability?: "import-ready" | "found-no-import" | "platform-no-import" | "not-media";
     message?: string;
     url: string;
   } | null>(null);
@@ -220,7 +222,7 @@ export function CreateProjectForm({
     const trimmed = url.trim();
     if (!trimmed) {
       setError("Link inválido.");
-      return;
+      return null;
     }
     setError(null);
     setLinkStatus("Analisando link...");
@@ -231,43 +233,60 @@ export function CreateProjectForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: trimmed }),
       });
-      const body = (await res.json()) as { error?: string; preview?: typeof preview };
+      const body = (await res.json()) as { error?: string; preview?: NonNullable<typeof preview> };
       if (!res.ok || !body.preview) {
         setPreview(null);
         setPhase("error");
         setLinkStatus(null);
         setError(body.error || "Link inválido.");
-        return;
+        return null;
       }
       setPreview(body.preview);
       setSourceUrl(body.preview.url);
       setPhase("idle");
-      setLinkStatus(body.preview.ingestSupported ? "Vídeo pronto." : body.preview.message || "Este link ainda não é suportado.");
+      setLinkStatus(
+        body.preview.ingestSupported || body.preview.availability === "found-no-import"
+          ? "Vídeo encontrado ✓"
+          : body.preview.availability === "not-media"
+            ? "Link analisado"
+            : "Fonte identificada",
+      );
+      return body.preview;
     } catch {
       setPhase("error");
       setLinkStatus(null);
       setError("Não foi possível importar este conteúdo.");
+      return null;
     }
   }
 
   async function importFromLink(form: HTMLFormElement) {
-    const url = (preview?.url || sourceUrl).trim();
+    if (!(form.elements.namedItem("authorized") as HTMLInputElement | null)?.checked) {
+      setError("Confirme a autorização de uso.");
+      return;
+    }
+    let current = preview;
+    if (!current) {
+      current = await analyzeLink();
+    }
+    const url = (current?.url || sourceUrl).trim();
     if (!url) {
       setError("Link inválido.");
       return;
     }
-    if (preview && !preview.ingestSupported) {
-      setError(preview.message || "Este link ainda não é suportado.");
+    if (current && !current.ingestSupported) {
+      setError(current.message || "Encontramos o vídeo, mas a importação automática desta fonte não está disponível para este conteúdo.");
       return;
     }
     abortRef.current?.abort();
     const abort = new AbortController();
     abortRef.current = abort;
     setPhase("uploading");
-    setLinkStatus("Importando vídeo...");
+    setLinkStatus("Preparando importação...");
     setError(null);
     try {
-      const payload = formPayload(form, preview?.title || "video.mp4");
+      const payload = formPayload(form, current?.title || "video.mp4");
+      setLinkStatus("Importando vídeo...");
       const res = await fetch("/api/ingest/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -280,7 +299,7 @@ export function CreateProjectForm({
           clipCount,
           clipDuration: duration,
           outputAspect: aspect,
-          authorized: true,
+          authorized: payload.authorized === true,
         }),
       });
       const body = (await res.json()) as { error?: string; projectId?: string };
@@ -288,9 +307,9 @@ export function CreateProjectForm({
         throw new Error(body.error || "Não foi possível importar este conteúdo.");
       }
       setPhase("processing");
-      setLinkStatus("Preparando vídeo...");
+      setLinkStatus("Enviando para o CortaClip...");
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({ projectId: body.projectId }));
-      setLinkStatus("Vídeo pronto.");
+      setLinkStatus("Gerando clips...");
       router.push(`/studio/projects/${body.projectId}`);
     } catch (err) {
       if (abort.signal.aborted) return;
@@ -475,41 +494,72 @@ export function CreateProjectForm({
               placeholder="https://..."
               className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-[14px] text-white outline-none placeholder:text-text-secondary"
             />
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 className="inline-flex h-11 items-center rounded-xl gradient-brand px-4 text-[13px] font-semibold text-white disabled:opacity-60"
                 onClick={() => void analyzeLink()}
                 disabled={busy}
               >
-                Importar vídeo
+                Analisar link
               </button>
-              {preview?.ingestSupported ? (
-                <span className="inline-flex h-11 items-center text-[13px] text-text-secondary">{linkStatus}</span>
-              ) : null}
+              {linkStatus ? <span className="text-[13px] text-text-secondary">{linkStatus}</span> : null}
             </div>
-            {linkStatus && !preview?.ingestSupported ? <p className="text-[13px] text-text-secondary">{linkStatus}</p> : null}
             {preview ? (
-              <div className="flex gap-4 rounded-2xl border border-border bg-surface p-4">
-                {preview.thumbnailUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={preview.thumbnailUrl} alt="" className="h-20 w-32 rounded-lg object-cover" />
-                ) : (
-                  <div className="flex h-20 w-32 items-center justify-center rounded-lg bg-muted text-[11px] text-text-secondary">
-                    {preview.platformLabel}
+              <div className="space-y-3 rounded-2xl border border-border bg-surface p-4">
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-emerald-400">
+                  {preview.ingestSupported || preview.availability === "found-no-import"
+                    ? "Vídeo encontrado ✓"
+                    : preview.availability === "not-media"
+                      ? "Link analisado"
+                      : "Fonte identificada"}
+                </p>
+                <div className="flex gap-4">
+                  {preview.thumbnailUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={preview.thumbnailUrl} alt="" className="h-20 w-32 rounded-lg object-cover" />
+                  ) : (
+                    <div className="flex h-20 w-32 items-center justify-center rounded-lg bg-muted text-[11px] text-text-secondary">
+                      {preview.platformLabel}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-medium text-white">{preview.title ?? "Vídeo"}</p>
+                    <p className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-text-secondary">
+                      <span className="rounded-full border border-magenta/40 bg-magenta/10 px-2 py-0.5 text-[11px] text-white">
+                        {preview.platformLabel}
+                      </span>
+                      {preview.creatorName ? <span>{preview.creatorName}</span> : null}
+                      {preview.durationSeconds ? <span>{formatDuration(preview.durationSeconds * 1000)}</span> : null}
+                    </p>
+                    {preview.ingestSupported ? (
+                      <p className="mt-2 text-[12px] text-emerald-400">✓ Fonte compatível</p>
+                    ) : (
+                      <p className="mt-2 text-[12px] text-gold">
+                        {preview.availability === "not-media"
+                          ? preview.message ?? "Este link não aponta para um arquivo de vídeo compatível."
+                          : "⚠ Importação automática indisponível para esta fonte."}
+                      </p>
+                    )}
                   </div>
-                )}
-                <div className="min-w-0">
-                  <p className="truncate text-[14px] font-medium text-white">{preview.title ?? "Vídeo"}</p>
-                  <p className="mt-1 text-[12px] text-text-secondary">
-                    {preview.platformLabel}
-                    {preview.creatorName ? ` · ${preview.creatorName}` : ""}
-                    {preview.durationSeconds ? ` · ${preview.durationSeconds}s` : ""}
-                  </p>
-                  {!preview.ingestSupported ? (
-                    <p className="mt-2 text-[12px] text-gold">{preview.message ?? "Este link ainda não é suportado."}</p>
-                  ) : null}
                 </div>
+                {!preview.ingestSupported && preview.availability !== "not-media" ? (
+                  <div className="space-y-3">
+                    <p className="text-[13px] text-text-secondary">
+                      Você ainda pode processar este vídeo enviando o arquivo original.
+                    </p>
+                    <button
+                      type="button"
+                      className="inline-flex h-10 items-center rounded-xl border border-border px-4 text-[13px] font-medium text-white"
+                      onClick={() => {
+                        setSourceTab("file");
+                        inputRef.current?.click();
+                      }}
+                    >
+                      Selecionar arquivo
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -826,7 +876,7 @@ export function CreateProjectForm({
 
       <label className="flex items-start gap-2.5 text-[14px] text-white">
         <input type="checkbox" name="authorized" required className="mt-0.5 size-4 accent-[#e92acb]" />
-        Confirmo que tenho autorização para utilizar este conteúdo.
+        Confirmo que sou proprietário deste conteúdo ou possuo autorização para utilizá-lo.
       </label>
       {error ? (
         <p className="text-[13px] text-destructive">

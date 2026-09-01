@@ -1,4 +1,4 @@
-import { IngestError } from "@/lib/ingest/errors";
+import { IngestError, ingestErrorMessage } from "@/lib/ingest/errors";
 import { assertSafeIngestUrl, assertSafeResolvedHost, type HostLookup } from "@/lib/security/ssrf";
 
 export type SafeFetchOptions = {
@@ -45,7 +45,7 @@ export async function safeIngestFetch(raw: string, options: SafeFetchOptions = {
       });
       if (response.status >= 300 && response.status < 400) {
         const next = redirectUrl(parsed, response.headers.get("location"));
-        if (!next) throw new IngestError("Não foi possível importar este conteúdo.", "unavailable");
+        if (!next) throw new IngestError(ingestErrorMessage("unavailable"), "unavailable");
         current = next.toString();
         continue;
       }
@@ -53,16 +53,16 @@ export async function safeIngestFetch(raw: string, options: SafeFetchOptions = {
     } catch (error) {
       if (error instanceof IngestError) throw error;
       if (error instanceof Error && error.name === "AbortError") {
-        throw new IngestError("Não foi possível importar este conteúdo.", "timeout");
+        throw new IngestError(ingestErrorMessage("timeout"), "timeout");
       }
       if (error instanceof Error && error.message.includes("URL de ingestão bloqueada")) {
-        throw new IngestError("URL de ingestão bloqueada.", "blocked");
+        throw new IngestError(ingestErrorMessage("blocked"), "blocked");
       }
-      throw new IngestError("Não foi possível importar este conteúdo.", "unavailable");
+      throw new IngestError(ingestErrorMessage("unavailable"), "unavailable");
     } finally {
       clearTimeout(timer);
       options.signal?.removeEventListener("abort", onAbort);
     }
   }
-  throw new IngestError("URL de ingestão bloqueada.", "blocked");
+  throw new IngestError(ingestErrorMessage("redirects"), "redirects");
 }

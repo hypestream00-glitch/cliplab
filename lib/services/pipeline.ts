@@ -25,6 +25,8 @@ import { sanitizePublicError, AiConfigurationError, EXTERNAL_AI_BLOCKED_MESSAGE 
 import { OpenAiHttpError } from "@/lib/ai/openai-error";
 import { externalAiProcessingAllowed } from "@/lib/env/status";
 import { clampClipDurationRange } from "@/lib/config/clip-score";
+import { ingestPendingSourceVideo } from "@/lib/ingest/worker-import";
+import { IngestError, isTransientIngestError } from "@/lib/ingest/errors";
 import type { Prisma, ProjectStatus } from "@/generated/prisma/client";
 
 async function setProgress(projectId: string, status: ProjectStatus, progress: number, message: string) {
@@ -97,8 +99,22 @@ export async function processProjectPipeline(projectId: string) {
     }
 
     await withJobTempDir(async (tmp) => {
-    const sourceVideo = project.sourceVideo!;
-    await setProgress(projectId, "PROBING", 8, "Processando vídeo");
+    let sourceVideo = project.sourceVideo!;
+    if (!sourceVideo.storageKey) {
+      await setProgress(projectId, "UPLOADING", 6, "Importando vídeo...");
+      await ingestPendingSourceVideo({
+        projectId,
+        workspaceId: project.workspaceId,
+        source: sourceVideo,
+      });
+      const refreshed = await prisma.sourceVideo.findUnique({ where: { id: sourceVideo.id } });
+      if (!refreshed?.storageKey) {
+        throw new IngestError("Não foi possível enviar o vídeo para o storage.", "storage");
+      }
+      sourceVideo = refreshed;
+      await setProgress(projectId, "UPLOADING", 12, "Enviando para o CortaClip...");
+    }
+    await setProgress(projectId, "PROBING", 16, "Preparando mídia...");
     const sourceKey = requireKey(sourceVideo.storageKey, "Vídeo de origem");
     const inputPath = await materializeObject(sourceKey, tmp, "source-video");
     const probe = await probeVideo(inputPath);
@@ -436,6 +452,9 @@ export async function processProjectPipeline(projectId: string) {
     if (error instanceof InsufficientCreditsError) {
       await fail(new Error("Créditos insuficientes para a duração real deste vídeo."));
       return;
+    }
+    if (isTransientIngestError(error)) {
+      throw error;
     }
     await fail(error);
   }

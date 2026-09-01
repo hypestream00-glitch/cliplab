@@ -1,6 +1,6 @@
 import { lookup as dnsLookup } from "node:dns/promises";
 
-const PRIVATE_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"]);
+const PRIVATE_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]", "ip6-localhost"]);
 
 export type HostLookup = (hostname: string) => Promise<string[]>;
 
@@ -9,7 +9,7 @@ function ipv4Private(host: string) {
   if (!match) return false;
   const a = Number(match[1]);
   const b = Number(match[2]);
-  if (a === 10 || a === 127) return true;
+  if (a === 0 || a === 10 || a === 127) return true;
   if (a === 169 && b === 254) return true;
   if (a === 172 && b >= 16 && b <= 31) return true;
   if (a === 192 && b === 168) return true;

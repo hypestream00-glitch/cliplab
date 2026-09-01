@@ -353,7 +353,9 @@ describe("visual and public copy", () => {
     expect(createForm).toContain("/api/ingest/preview");
     expect(createForm).toContain("/api/ingest/import");
     expect(createForm).toContain("Cole o link do vídeo");
-    expect(createForm).toContain("Importar vídeo");
+    expect(createForm).toContain("Analisar link");
+    expect(createForm).toContain("Importar e criar clips");
+    expect(createForm).toContain("Selecionar arquivo");
     expect(createForm).not.toContain("Em breve");
     const theme = readFileSync(path.join(root, "app/globals.css"), "utf8");
     expect(theme).toContain("--surface:");

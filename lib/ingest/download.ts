@@ -5,11 +5,14 @@ import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import { classifyIngestUrl } from "@/lib/ingest/classify";
 import { IngestError, ingestErrorMessage } from "@/lib/ingest/errors";
+import { isVideoContentType, mimeFromVideoType } from "@/lib/ingest/media-type";
+import { getMediaImportProvider } from "@/lib/ingest/providers";
 import { safeIngestFetch } from "@/lib/ingest/safe-fetch";
-import { looksLikeVideoContainer, validateUploadFile } from "@/lib/media/validate";
-import { randomStorageKey } from "@/lib/storage";
+import { looksLikeVideoContainer, InvalidVideoError, validateUploadFile } from "@/lib/media/validate";
+import { getStorage, randomStorageKey } from "@/lib/storage";
 import { commitLocalFile, withJobTempDir } from "@/lib/storage/materialize";
 import type { HostLookup } from "@/lib/security/ssrf";
+import { filenameFromIngestUrl } from "@/lib/ingest/url";
 
 export type DownloadDeps = {
   lookup?: HostLookup;
@@ -19,20 +22,16 @@ export type DownloadDeps = {
 
 const DOWNLOAD_TIMEOUT_MS = 120_000;
 
-function filenameFromUrl(url: string) {
-  try {
-    const name = decodeURIComponent(new URL(url).pathname.split("/").filter(Boolean).at(-1) ?? "video.mp4");
-    return /\.(mp4|mov|webm)$/i.test(name) ? name : `${name.replace(/\.[^.]+$/, "") || "video"}.mp4`;
-  } catch {
-    return "video.mp4";
-  }
+function downloadFilename(url: string) {
+  const name = filenameFromIngestUrl(url);
+  return /\.(mp4|mov|webm)$/i.test(name) ? name : `${name.replace(/\.[^.]+$/, "") || "video"}.mp4`;
 }
 
-function mimeFromType(type: string, filename: string) {
-  const lower = type.toLowerCase();
-  if (lower.includes("webm")) return "video/webm";
-  if (lower.includes("quicktime") || filename.toLowerCase().endsWith(".mov")) return "video/quicktime";
-  return "video/mp4";
+function unwrapIngestError(error: unknown): IngestError | null {
+  if (error instanceof IngestError) return error;
+  if (error instanceof Error && error.cause instanceof IngestError) return error.cause;
+  if (error instanceof InvalidVideoError) return new IngestError(ingestErrorMessage("not-video"), "not-video");
+  return null;
 }
 
 export async function downloadDirectVideoToStorage(params: {
@@ -43,8 +42,32 @@ export async function downloadDirectVideoToStorage(params: {
 }) {
   const classified = classifyIngestUrl(params.url);
   if (!classified) throw new IngestError(ingestErrorMessage("invalid-url"), "invalid-url");
-  if (!classified.ingestSupported || classified.provider !== "DIRECT_URL") {
-    throw new IngestError(ingestErrorMessage("unsupported"), "unsupported");
+  const provider = getMediaImportProvider(classified.provider);
+  if (!provider.canImport(classified) || classified.provider !== "DIRECT_URL") {
+    throw new IngestError(ingestErrorMessage("import-unavailable"), "import-unavailable");
+  }
+
+  try {
+    const head = await safeIngestFetch(classified.url, {
+      method: "HEAD",
+      timeoutMs: 20_000,
+      lookup: params.deps?.lookup,
+      fetchImpl: params.deps?.fetchImpl,
+      signal: params.deps?.signal,
+    });
+    if (head.response.ok) {
+      const headLength = Number(head.response.headers.get("content-length") ?? 0);
+      if (headLength > params.maxBytes) {
+        throw new IngestError(ingestErrorMessage("too-large"), "too-large");
+      }
+      const headType = head.response.headers.get("content-type") ?? "";
+      if (headType && !isVideoContentType(headType, head.finalUrl)) {
+        throw new IngestError(ingestErrorMessage("not-video"), "not-video");
+      }
+    }
+  } catch (error) {
+    const ingest = unwrapIngestError(error);
+    if (ingest && ingest.code !== "unavailable" && ingest.code !== "timeout") throw ingest;
   }
 
   const { response, finalUrl } = await safeIngestFetch(classified.url, {
@@ -64,8 +87,12 @@ export async function downloadDirectVideoToStorage(params: {
   if (contentLength > params.maxBytes) {
     throw new IngestError(ingestErrorMessage("too-large"), "too-large");
   }
-  const filename = filenameFromUrl(finalUrl);
-  const mimeType = mimeFromType(response.headers.get("content-type") ?? "", filename);
+  const type = response.headers.get("content-type") ?? "";
+  if (type && !isVideoContentType(type, finalUrl)) {
+    throw new IngestError(ingestErrorMessage("not-video"), "not-video");
+  }
+  const filename = downloadFilename(finalUrl);
+  const mimeType = mimeFromVideoType(type, filename);
 
   return withJobTempDir(async (dir) => {
     const file = path.join(dir, "ingest.bin");
@@ -80,7 +107,8 @@ export async function downloadDirectVideoToStorage(params: {
     try {
       await pipeline(nodeStream, createWriteStream(file));
     } catch (error) {
-      if (error instanceof IngestError) throw error;
+      const ingest = unwrapIngestError(error);
+      if (ingest) throw ingest;
       throw new IngestError(ingestErrorMessage("unavailable"), "unavailable");
     }
     if (sizeBytes <= 0) throw new IngestError(ingestErrorMessage("not-video"), "not-video");
@@ -94,14 +122,30 @@ export async function downloadDirectVideoToStorage(params: {
     } finally {
       await handle.close();
     }
-    const validated = validateUploadFile({
-      filename,
-      mimeType,
-      sizeBytes,
-      maxBytes: params.maxBytes,
-    });
+    let validated;
+    try {
+      validated = validateUploadFile({
+        filename,
+        mimeType,
+        sizeBytes,
+        maxBytes: params.maxBytes,
+      });
+    } catch (error) {
+      const ingest = unwrapIngestError(error);
+      if (ingest) throw ingest;
+      throw new IngestError(ingestErrorMessage("not-video"), "not-video");
+    }
     const storageKey = randomStorageKey(filename, `uploads/${params.workspaceId}`);
-    await commitLocalFile(file, storageKey, validated.mime);
+    try {
+      await commitLocalFile(file, storageKey, validated.mime);
+    } catch {
+      try {
+        await getStorage().deleteObject(storageKey);
+      } catch {
+        /* ignore cleanup errors */
+      }
+      throw new IngestError(ingestErrorMessage("storage"), "storage");
+    }
     return { storageKey, mimeType: validated.mime, sizeBytes, filename, finalUrl };
   });
 }
