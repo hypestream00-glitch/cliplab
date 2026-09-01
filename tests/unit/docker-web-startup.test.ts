@@ -31,7 +31,7 @@ describe("Railway web image", () => {
     expect(startWeb).not.toContain("workers/index");
   });
 
-  it("runs prisma migrate deploy before Next.js, with P3009 recovery only for ProcessingJob", () => {
+  it("runs prisma migrate deploy before Next.js, with P3009/P3018/P3005 recovery only for ProcessingJob", () => {
     expect(pkg.scripts["db:deploy"]).toBe("prisma migrate deploy");
     expect(pkg.dependencies.prisma).toBe("^7.10.0");
     expect(pkg.dependencies["@prisma/client"]).toBe("^7.10.0");
@@ -46,7 +46,14 @@ describe("Railway web image", () => {
     const migrateHelper = readFileSync("scripts/prisma-migrate-production.mjs", "utf8");
     expect(migrateHelper).toContain('KNOWN_RECOVERABLE_MIGRATION = "20260901034100_add_processing_job"');
     expect(migrateHelper).toContain('"--rolled-back"');
-    expect(migrateHelper).not.toContain("--applied");
+    expect(migrateHelper).toContain("shouldRecoverKnownFailedMigration");
+    expect(migrateHelper).toContain("P3018");
+    expect(migrateHelper).toContain("P3005");
+    expect(migrateHelper).toContain('"db"');
+    expect(migrateHelper).toContain('"execute"');
+    expect(migrateHelper).toContain('"--applied"');
+    expect(migrateHelper).toContain("APPLIED after SQL succeeded");
+    expect(migrateHelper).toContain("SQL was not applied; migration was not marked as applied");
     expect(migrateHelper).not.toContain("migrate reset");
     expect(migrateHelper).not.toContain("db push");
     expect(dockerfile).toContain("prisma.config.ts");
