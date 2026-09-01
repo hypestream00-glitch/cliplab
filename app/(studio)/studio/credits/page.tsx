@@ -18,7 +18,7 @@ export default async function CreditsPage() {
     <div>
       <PageHeader
         title="Créditos"
-        description="Histórico interno de créditos CLIPLAB. O limite do produto é medido em minutos de vídeo — veja Plano e uso."
+        description="Histórico interno de créditos CortaClip. O limite do produto é medido em minutos de vídeo — veja Plano e uso."
         actions={
         <Link href="/studio/settings/billing" className="text-[13px] text-muted-foreground hover:text-foreground">
             Ver plano e minutos
@@ -26,13 +26,13 @@ export default async function CreditsPage() {
         }
       />
       <div className="grid gap-3 md:grid-cols-2">
-        <StatCard label="Saldo de créditos CLIPLAB" value={available == null ? "—" : formatNumber(available)} />
+        <StatCard label="Saldo de créditos CortaClip" value={available == null ? "—" : formatNumber(available)} />
         <StatCard label="Uso no período" value={periodUsed > 0 ? formatNumber(periodUsed) : "—"} />
       </div>
       <h2 className="mt-6 mb-2 text-[13px] font-semibold">Histórico</h2>
       <div className="divide-y rounded-2xl border bg-card text-[13px]">
         {usage.length === 0 ? (
-          <EmptyState title="Nenhuma transação ainda." description="O uso real de créditos CLIPLAB aparece aqui." />
+          <EmptyState title="Nenhuma transação ainda." description="O uso real de créditos CortaClip aparece aqui." />
         ) : (
           usage.map((item) => (
             <div key={item.id} className="flex justify-between gap-3 px-4 py-2.5">

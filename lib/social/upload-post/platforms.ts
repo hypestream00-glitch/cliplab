@@ -55,7 +55,7 @@ export function connectPlatforms(): string[] {
   return ["tiktok", "instagram", "facebook", "x", "youtube", "linkedin", "threads", "pinterest", "reddit"];
 }
 
-/** CLIPLAB platforms supported by Upload-Post video upload + JWT/Connect API (docs atuais). */
+/** Platforms supported by Upload-Post video upload + JWT/Connect API (docs atuais). */
 export function getSupportedPlatforms(): SocialPlatform[] {
   return ["TIKTOK", "INSTAGRAM", "FACEBOOK", "X", "YOUTUBE", "LINKEDIN", "THREADS", "PINTEREST", "BLUESKY", "REDDIT"];
 }

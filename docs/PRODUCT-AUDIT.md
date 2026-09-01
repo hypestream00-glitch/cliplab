@@ -1,4 +1,4 @@
-# CLIPLAB — Product Audit (Módulo 5)
+# CortaClip — Product Audit (Módulo 5)
 
 Auditoria do produto existente. Sem novas redes, sem novo editor, sem Stripe real nesta rodada.
 

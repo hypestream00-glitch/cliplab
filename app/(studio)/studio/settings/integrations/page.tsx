@@ -47,11 +47,11 @@ export default function IntegrationsPage() {
       <div className="mb-4">
         {unified ? (
           <DevNotice>
-            Padrão: Upload-Post. Sem UPLOAD_POST_API_KEY a UI mostra CONFIG REQUIRED — CLIPLAB não finge OAuth nem pede senha.
+            Padrão: Upload-Post. Sem UPLOAD_POST_API_KEY a UI mostra CONFIG REQUIRED — CortaClip não finge OAuth nem pede senha.
           </DevNotice>
         ) : (
           <DevNotice>
-            TikTok, Meta, X e YouTube só publicam de verdade com credenciais oficiais. Sem chaves a UI mostra Configuração necessária — CLIPLAB não finge OAuth nem pede senha.
+            TikTok, Meta, X e YouTube só publicam de verdade com credenciais oficiais. Sem chaves a UI mostra Configuração necessária — CortaClip não finge OAuth nem pede senha.
           </DevNotice>
         )}
       </div>

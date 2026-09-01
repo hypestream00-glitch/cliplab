@@ -29,7 +29,7 @@ const FEATURES = [
 const FAQ = [
   {
     q: "Preciso de um vídeo curto para começar?",
-    a: "Não. O CLIPLAB é feito para vídeos longos: lives, podcasts, aulas e entrevistas viram vários clips.",
+    a: `Não. O ${brand.name} é feito para vídeos longos: lives, podcasts, aulas e entrevistas viram vários clips.`,
   },
   {
     q: "O viral score garante visualizações?",
@@ -117,7 +117,7 @@ export default function MarketingPage() {
       <section id="precos" className="border-t border-white/5 bg-zinc-950/40">
         <div className="mx-auto max-w-6xl px-4 py-16">
           <h2 className="text-2xl font-semibold tracking-tight">Preços</h2>
-          <p className="mt-2 text-[14px] text-muted-foreground">Planos reais da configuração do CLIPLAB.</p>
+          <p className="mt-2 text-[14px] text-muted-foreground">Planos reais da configuração do {brand.name}.</p>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {PRODUCT_PLAN_CODES.map((code) => {
               const plan = PLAN_LIMITS[code];

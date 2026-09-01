@@ -202,7 +202,7 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
 
   return (
     <div>
-      <PageHeader title="Contas" description="Conecte redes via OAuth nativo (fallback). CLIPLAB nunca pede senha da plataforma." />
+      <PageHeader title="Contas" description="Conecte redes via OAuth nativo (fallback). CortaClip nunca pede senha da plataforma." />
       <div className="mb-3 flex flex-wrap gap-2 text-[11px]">
         <span className="rounded-md border px-2 py-0.5">TikTok OAuth: {tiktokOAuthStatus()}</span>
         <span className="rounded-md border px-2 py-0.5">Content Posting: {tiktokContentPostingStatus()}</span>

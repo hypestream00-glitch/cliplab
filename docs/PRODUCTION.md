@@ -1,4 +1,4 @@
-# Produção — CLIPLAB
+# Produção — CortaClip
 
 Ainda **não** fazer deploy a partir desta pasta sem o checklist abaixo. Detalhe de status: `docs/PRODUCTION-READINESS.md`. Setup externo: `docs/EXTERNAL-SETUP.md`.
 

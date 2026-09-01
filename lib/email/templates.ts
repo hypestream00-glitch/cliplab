@@ -68,14 +68,14 @@ function greeting(vars: EmailTemplateVars) {
 }
 
 export function renderEmailTemplate(id: EmailTemplateId, vars: EmailTemplateVars = {}): RenderedEmail {
-  const planName = escapeHtml(vars.planName?.trim() || "CLIPLAB");
+  const planName = escapeHtml(vars.planName?.trim() || brand.name);
   const periodEnd = escapeHtml(vars.periodEnd?.trim() || "");
   const hello = greeting(vars);
 
   switch (id) {
     case "verify-email": {
-      const subject = "Confirme seu e-mail no CLIPLAB";
-      const text = `${hello},\n\nConfirme seu e-mail para ativar sua conta CLIPLAB.\n${vars.actionUrl ?? ""}\n\nSe você não criou a conta, ignore este e-mail.`;
+      const subject = `Confirme seu e-mail no ${brand.name}`;
+      const text = `${hello},\n\nConfirme seu e-mail para ativar sua conta ${brand.name}.\n${vars.actionUrl ?? ""}\n\nSe você não criou a conta, ignore este e-mail.`;
       const html = layout(
         "Confirme seu e-mail",
         `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">Clique no botão para confirmar que este e-mail é seu. O link expira em breve e só pode ser usado uma vez.</p>`,
@@ -85,7 +85,7 @@ export function renderEmailTemplate(id: EmailTemplateId, vars: EmailTemplateVars
       return { id, subject, html, text };
     }
     case "password-reset": {
-      const subject = "Redefinir senha do CLIPLAB";
+      const subject = `Redefinir senha do ${brand.name}`;
       const text = `${hello},\n\nUse o link para escolher uma nova senha.\n${vars.actionUrl ?? ""}\n\nSe você não pediu isso, ignore este e-mail.`;
       const html = layout(
         "Redefinir senha",
@@ -96,11 +96,11 @@ export function renderEmailTemplate(id: EmailTemplateId, vars: EmailTemplateVars
       return { id, subject, html, text };
     }
     case "welcome": {
-      const subject = "Bem-vindo ao CLIPLAB";
+      const subject = `Bem-vindo ao ${brand.name}`;
       const createUrl = vars.actionUrl ?? appPathUrl("/studio/create");
-      const text = `${hello},\n\nSua conta CLIPLAB está pronta. Crie seu primeiro projeto:\n${createUrl}`;
+      const text = `${hello},\n\nSua conta ${brand.name} está pronta. Crie seu primeiro projeto:\n${createUrl}`;
       const html = layout(
-        "Bem-vindo ao CLIPLAB",
+        `Bem-vindo ao ${brand.name}`,
         `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">Sua conta está confirmada. O próximo passo é criar o primeiro projeto e transformar um vídeo em clips.</p>`,
         text,
         { label: "Criar primeiro projeto", href: createUrl },
@@ -108,8 +108,8 @@ export function renderEmailTemplate(id: EmailTemplateId, vars: EmailTemplateVars
       return { id, subject, html, text };
     }
     case "subscription-activated": {
-      const subject = `Seu plano ${vars.planName?.trim() || "CLIPLAB"} está ativo`;
-      const text = `${hello},\n\nSeu plano ${vars.planName?.trim() || "CLIPLAB"} está ativo. O plano só muda depois da confirmação do pagamento.`;
+      const subject = `Seu plano ${vars.planName?.trim() || brand.name} está ativo`;
+      const text = `${hello},\n\nSeu plano ${vars.planName?.trim() || brand.name} está ativo. O plano só muda depois da confirmação do pagamento.`;
       const html = layout(
         `Seu plano ${planName} está ativo`,
         `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">Confirmamos sua assinatura. O plano <strong style="color:#fff">${planName}</strong> já está disponível na sua conta.</p>`,
@@ -120,7 +120,7 @@ export function renderEmailTemplate(id: EmailTemplateId, vars: EmailTemplateVars
     }
     case "subscription-changed": {
       const subject = "Seu plano foi alterado";
-      const text = `${hello},\n\nSeu plano CLIPLAB agora é ${vars.planName?.trim() || "atualizado"}.`;
+      const text = `${hello},\n\nSeu plano ${brand.name} agora é ${vars.planName?.trim() || "atualizado"}.`;
       const html = layout(
         "Seu plano foi alterado",
         `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">Sua assinatura agora é <strong style="color:#fff">${planName}</strong>. Os limites da conta já seguem o novo plano.</p>`,
@@ -133,8 +133,8 @@ export function renderEmailTemplate(id: EmailTemplateId, vars: EmailTemplateVars
       const when = vars.periodEnd?.trim();
       const subject = when ? `Sua assinatura será encerrada em ${when}` : "Sua assinatura foi encerrada";
       const text = when
-        ? `${hello},\n\nSua assinatura CLIPLAB será encerrada em ${when}. Seus projetos permanecem.`
-        : `${hello},\n\nSua assinatura CLIPLAB foi encerrada. Seus projetos, clips e contas sociais não foram removidos.`;
+        ? `${hello},\n\nSua assinatura ${brand.name} será encerrada em ${when}. Seus projetos permanecem.`
+        : `${hello},\n\nSua assinatura ${brand.name} foi encerrada. Seus projetos, clips e contas sociais não foram removidos.`;
       const html = layout(
         when ? "Sua assinatura será encerrada" : "Sua assinatura foi encerrada",
         when
@@ -147,7 +147,7 @@ export function renderEmailTemplate(id: EmailTemplateId, vars: EmailTemplateVars
     }
     case "payment-failed": {
       const subject = "Não conseguimos processar seu pagamento";
-      const text = `${hello},\n\nNão conseguimos processar o pagamento da sua assinatura CLIPLAB. Seus projetos não foram removidos. Atualize o pagamento quando possível.`;
+      const text = `${hello},\n\nNão conseguimos processar o pagamento da sua assinatura ${brand.name}. Seus projetos não foram removidos. Atualize o pagamento quando possível.`;
       const html = layout(
         "Não conseguimos processar seu pagamento",
         `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">Houve um problema no pagamento da assinatura. Seus projetos e contas sociais continuam na conta. Atualize o pagamento para evitar a interrupção do plano.</p>`,
@@ -181,7 +181,7 @@ export function renderEmailTemplate(id: EmailTemplateId, vars: EmailTemplateVars
       return { id, subject, html, text };
     }
     default: {
-      const subject = "CLIPLAB";
+      const subject = brand.name;
       return { id, subject, html: layout(subject, "", subject), text: subject };
     }
   }

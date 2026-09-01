@@ -9,7 +9,7 @@ export function cliplabPublishedWhere(workspaceId: string): Prisma.SocialPublica
 }
 
 export function accountAnalyticsDisclaimer() {
-  return "Métricas da conta social conectada. Incluem conteúdo publicado fora do CLIPLAB.";
+  return "Métricas da conta social conectada. Incluem conteúdo publicado fora do CortaClip.";
 }
 
 export function cliplabViewsEmptyHint() {

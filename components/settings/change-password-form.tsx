@@ -6,7 +6,7 @@ import { changePasswordAction } from "@/app/(studio)/studio/settings/actions";
 const ERRORS: Record<string, string> = {
   invalid: "A nova senha precisa ter 8 caracteres, letra e número, e as confirmações devem coincidir.",
   current: "A senha atual não confere.",
-  oauth: "Esta conta não usa senha CLIPLAB.",
+  oauth: "Esta conta não usa senha CortaClip.",
 };
 
 export function ChangePasswordForm({
@@ -22,7 +22,7 @@ export function ChangePasswordForm({
     <form action={changePasswordAction} className="max-w-md space-y-3 rounded-xl border p-4">
       <input type="hidden" name="redirectTo" value={redirectTo} />
       <p className="text-[13px] font-medium">Alterar senha</p>
-      <p className="text-[12px] text-muted-foreground">Use a senha da conta CLIPLAB. Nunca a senha de uma rede social.</p>
+      <p className="text-[12px] text-muted-foreground">Use a senha da conta CortaClip. Nunca a senha de uma rede social.</p>
       {saved ? <p className="text-[12px] text-emerald-300">Senha atualizada. Outras sessões foram encerradas.</p> : null}
       {error && ERRORS[error] ? <p className="text-[12px] text-destructive">{ERRORS[error]}</p> : null}
       <div className="space-y-1.5">

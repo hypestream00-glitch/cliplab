@@ -49,9 +49,9 @@ async function main() {
   if (verify.ok) {
     const send = await provider.send({
       to: "hypestream00@gmail.com",
-      subject: "CLIPLAB — E-mail configurado",
-      text: "O sistema de e-mails transacionais do CLIPLAB está funcionando corretamente.",
-      html: "<p>O sistema de e-mails transacionais do CLIPLAB está funcionando corretamente.</p>",
+      subject: "CortaClip — E-mail configurado",
+      text: "O sistema de e-mails transacionais do CortaClip está funcionando corretamente.",
+      html: "<p>O sistema de e-mails transacionais do CortaClip está funcionando corretamente.</p>",
     });
     testEmail = send.ok ? { accepted: true } : { accepted: false, error: send.error };
     if (send.ok) {
@@ -60,7 +60,7 @@ async function main() {
           type: "smtp-test",
           recipient: "hypestream00@gmail.com",
           idempotencyKey: `smtp-test:${Date.now()}`,
-          subject: "CLIPLAB — E-mail configurado",
+          subject: "CortaClip — E-mail configurado",
           status: "SENT",
           sentAt: new Date(),
           attempts: 1,
@@ -131,14 +131,14 @@ async function main() {
     to: testUser.email,
     userId: testUser.id,
     workspaceId: projectBefore?.workspaceId ?? "ws-e2e",
-    planName: "CLIPLAB Pro",
+    planName: "CortaClip Pro",
     subscriptionId: `sub_e2e_${stamp}`,
   });
   const sub2 = await sendSubscriptionActivatedEmail({
     to: testUser.email,
     userId: testUser.id,
     workspaceId: "other-workspace",
-    planName: "CLIPLAB Pro",
+    planName: "CortaClip Pro",
     subscriptionId: `sub_e2e_${stamp}`,
   });
 

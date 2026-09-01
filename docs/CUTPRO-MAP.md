@@ -1,4 +1,4 @@
-# Mapa público Cut.Pro → CLIPLAB
+# Mapa público Cut.Pro → CortaClip
 
 Investigação via páginas públicas (2026-08-29). `/studio` e `/studio/metrics/accounts` redirecionam para `/auth?step=login`. Nenhuma tela autenticada foi acessada.
 

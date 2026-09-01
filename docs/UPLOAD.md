@@ -5,14 +5,14 @@ Arquitetura de produção:
 ```
 Browser
   ↓
-CLIPLAB API — POST /api/uploads/init
+CortaClip API — POST /api/uploads/init
   (auth, workspace, plano, tamanho, MIME, object key, signed PUT)
   ↓
 Signed PUT URL (TTL 20 min, uma key, um método)
   ↓
 Browser → Cloudflare R2 (bucket privado cliplab-media)
   ↓
-CLIPLAB API — POST /api/uploads/:id  (complete)
+CortaClip API — POST /api/uploads/:id  (complete)
   ↓
 HEAD no objeto (existe, size, Content-Type quando houver)
   ↓
@@ -86,4 +86,4 @@ Dev atual:
 ]
 ```
 
-Produção: acrescentar somente `https://DOMINIO-REAL-DO-CLIPLAB` (valor de `APP_URL`). Staging, se existir, vira uma origin HTTPS própria — nunca `*`.
+Produção: acrescentar somente `https://cortaclip.com` (valor de `APP_URL`). Staging, se existir, vira uma origin HTTPS própria — nunca `*`.

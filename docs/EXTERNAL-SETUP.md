@@ -1,4 +1,4 @@
-# Setup externo — checklist CLIPLAB
+# Setup externo — checklist CortaClip
 
 Callbacks para copiar: `/studio/settings/status` (não procure no código).
 

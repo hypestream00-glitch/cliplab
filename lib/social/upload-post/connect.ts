@@ -48,8 +48,8 @@ export async function generateUploadPostConnectUrl(workspaceId: string) {
       redirect_url: uploadPostAccountsRedirectUrl(),
       language: "pt",
       connect_title: "Conectar redes sociais",
-      connect_description: "Autorize suas contas sociais. CLIPLAB não pede senha nem app de desenvolvedor.",
-      redirect_button_text: "Voltar ao CLIPLAB",
+      connect_description: "Autorize suas contas sociais. CortaClip não pede senha nem app de desenvolvedor.",
+      redirect_button_text: "Voltar ao CortaClip",
       show_calendar: false,
     },
   });

@@ -1,4 +1,4 @@
-# CLIPLAB
+# CortaClip
 
 SaaS de clipping, edição, publicação e analytics de vídeos.
 

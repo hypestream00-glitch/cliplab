@@ -1,5 +1,23 @@
 const DEFAULT_ALLOWED = ["http://localhost:3000", "http://127.0.0.1:3000"];
 
+function publicOriginVariants(origin: string) {
+  const trimmed = origin.replace(/\/$/, "");
+  if (!trimmed) return [];
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.toLowerCase();
+    if (host === "cortaclip.com") {
+      return [`${url.protocol}//cortaclip.com`, `${url.protocol}//www.cortaclip.com`];
+    }
+    if (host === "www.cortaclip.com") {
+      return [`${url.protocol}//www.cortaclip.com`, `${url.protocol}//cortaclip.com`];
+    }
+    return [url.origin];
+  } catch {
+    return [trimmed];
+  }
+}
+
 export function allowedOrigins(source: NodeJS.ProcessEnv = process.env) {
   const extra = (source.CORS_ORIGINS ?? "")
     .split(",")
@@ -7,7 +25,7 @@ export function allowedOrigins(source: NodeJS.ProcessEnv = process.env) {
     .filter(Boolean);
   const auth = (source.AUTH_URL ?? source.APP_URL ?? "").replace(/\/$/, "");
   const defaults = source.NODE_ENV === "production" ? [] : DEFAULT_ALLOWED;
-  return [...new Set([...defaults, ...extra, auth].filter(Boolean))];
+  return [...new Set([...defaults, ...extra, ...publicOriginVariants(auth)].filter(Boolean))];
 }
 
 export function corsOriginFor(requestOrigin: string | null) {

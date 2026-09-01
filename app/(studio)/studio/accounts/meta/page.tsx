@@ -35,7 +35,7 @@ export default async function MetaSelectPage({ searchParams }: PageSearchProps) 
     <div className="max-w-2xl">
       <PageHeader
         title={intent === "INSTAGRAM" ? "Escolher Instagram" : "Escolher Páginas do Facebook"}
-        description="CLIPLAB não conecta automaticamente todas as páginas. Marque somente o que deseja publicar."
+        description="CortaClip não conecta automaticamente todas as páginas. Marque somente o que deseja publicar."
       />
       {pages.length === 0 ? (
         <p className="text-[13px] text-amber-200">

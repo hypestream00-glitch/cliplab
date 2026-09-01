@@ -1,4 +1,4 @@
-# Upload-Post — integração CLIPLAB
+# Upload-Post — integração CortaClip
 
 Fonte de verdade: [docs.upload-post.com](https://docs.upload-post.com/) e [upload-post.com](https://www.upload-post.com/).
 

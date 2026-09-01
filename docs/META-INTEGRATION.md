@@ -1,4 +1,4 @@
-# Integração Meta — Instagram + Facebook (CLIPLAB)
+# Integração Meta — Instagram + Facebook (CortaClip)
 
 Fontes oficiais consultadas em 29/08/2026:
 

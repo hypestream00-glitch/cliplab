@@ -50,7 +50,7 @@ export default async function MetricsPage({ searchParams }: PageSearchProps) {
 
   return (
     <div>
-      <PageHeader title="Analytics" description="Separe o desempenho do conteúdo CLIPLAB das métricas da conta social conectada." />
+      <PageHeader title="Analytics" description="Separe o desempenho do conteúdo CortaClip das métricas da conta social conectada." />
       <nav className="mb-1 flex gap-1 rounded-lg bg-muted p-[3px] text-[13px]">
         <Link href="/studio/analytics" className="rounded-md bg-background px-3 py-1 font-medium shadow-sm">
           Visão geral
@@ -71,10 +71,10 @@ export default async function MetricsPage({ searchParams }: PageSearchProps) {
       </form>
 
       <section className="mt-2">
-        <h2 className="mb-2 text-[15px] font-semibold tracking-tight">Analytics do conteúdo CLIPLAB</h2>
-        <p className="mb-3 text-[13px] text-muted-foreground">Somente publicações feitas pelo CLIPLAB.</p>
+        <h2 className="mb-2 text-[15px] font-semibold tracking-tight">Analytics do conteúdo CortaClip</h2>
+        <p className="mb-3 text-[13px] text-muted-foreground">Somente publicações feitas pelo CortaClip.</p>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-2">
-          <StatCard label="Publicações CLIPLAB" value={formatNumber(publishedCount)} />
+          <StatCard label="Publicações CortaClip" value={formatNumber(publishedCount)} />
           <StatCard
             label="Visualizações"
             value={formatMetricOrEmpty(cliplabViews, cliplabViews != null ? formatNumber(cliplabViews) : "—")}

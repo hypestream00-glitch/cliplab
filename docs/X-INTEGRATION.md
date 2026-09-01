@@ -1,4 +1,4 @@
-# Integração X (Twitter) — CLIPLAB
+# Integração X (Twitter) — CortaClip
 
 Fontes oficiais consultadas em 29/08/2026:
 

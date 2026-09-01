@@ -250,7 +250,7 @@ export function ComposeForm({
             />
           </label>
           <p className="text-muted-foreground">
-            Thumbnail gerada pelo CLIPLAB é enviada se a API aceitar. Falha no thumbnail não cancela o upload.
+            Thumbnail gerada pelo CortaClip é enviada se a API aceitar. Falha no thumbnail não cancela o upload.
           </p>
         </div>
       ) : null}

@@ -9,6 +9,7 @@ import { uploadPostJson, uploadPostRequest, parseUploadPostError } from "@/lib/s
 import { publicationStatusFromResults, mapPlatformResultStatus } from "@/lib/social/upload-post/status";
 import { recordSocialUsage } from "@/lib/social/upload-post/usage";
 import { logger } from "@/lib/logger";
+import { defaultClipTitle } from "@/lib/config/brand";
 import type { PlatformOverrides } from "@/lib/social/unified";
 import type { PublicationStatus, SocialPlatform } from "@/generated/prisma/client";
 
@@ -152,7 +153,7 @@ export async function publishViaUploadPost(params: {
   const form = new FormData();
   form.append("user", profile.username);
   for (const platform of platforms) form.append("platform[]", platform);
-  const title = publication.caption || publication.clip?.title || "Clipe CLIPLAB";
+  const title = publication.caption || publication.clip?.title || defaultClipTitle();
   form.append("title", title);
   form.append("async_upload", "true");
   form.append("external_id", publication.id);

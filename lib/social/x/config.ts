@@ -31,7 +31,7 @@ export function xOAuthStatus(): "CONFIGURED" | "NOT CONFIGURED" {
 
 /**
  * Write/media posting on X depends on Developer API access + paid tier (Basic/Pro/Enterprise).
- * Free tier typically cannot post. CLIPLAB never fakes a successful post.
+ * Free tier typically cannot post. CortaClip never fakes a successful post.
  */
 export function xPublishingStatus(): "AVAILABLE" | "API ACCESS REQUIRED" | "PLAN REQUIRED" | "CONFIGURATION REQUIRED" {
   if (!isXConfigured()) return "CONFIGURATION REQUIRED";

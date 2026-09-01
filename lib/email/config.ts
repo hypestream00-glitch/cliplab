@@ -37,7 +37,7 @@ export function smtpSecure() {
 }
 
 export function smtpFromName() {
-  return (process.env.SMTP_FROM_NAME ?? "CLIPLAB").trim() || "CLIPLAB";
+  return (process.env.SMTP_FROM_NAME ?? "CortaClip").trim() || "CortaClip";
 }
 
 export function smtpFromAddress() {

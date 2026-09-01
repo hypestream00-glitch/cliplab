@@ -85,7 +85,7 @@ export default async function AccountMetricsPage({ params }: PageParamsProps<{ i
       </div>
       {account.postMetrics.length === 0 ? (
         <p className="mt-4 rounded-lg border border-dashed px-3 py-8 text-center text-[13px] text-muted-foreground">
-          Sem métricas de conteúdo. CLIPLAB não inventa melhor horário.
+          Sem métricas de conteúdo. CortaClip não inventa melhor horário.
         </p>
       ) : (
         <div className="mt-4 overflow-x-auto rounded-lg border">

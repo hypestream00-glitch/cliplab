@@ -1,4 +1,4 @@
-# Production readiness — CLIPLAB
+# Production readiness — CortaClip
 
 Classificação: READY | NEEDS_ENV | NEEDS_EXTERNAL_ACCOUNT | NEEDS_APPROVAL | NEEDS_DEPLOYMENT | OPTIONAL | BLOCKED.
 

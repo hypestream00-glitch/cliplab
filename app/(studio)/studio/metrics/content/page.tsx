@@ -30,7 +30,7 @@ export default async function ContentMetricsPage({ searchParams }: PageSearchPro
 
   return (
     <div>
-      <PageHeader title="Conteúdo" description="Métricas por publicação CLIPLAB. Snapshots persistidos — CLIPLAB não consulta X, YouTube ou outras APIs a cada carregamento." />
+      <PageHeader title="Conteúdo" description="Métricas por publicação CortaClip. Snapshots persistidos — CortaClip não consulta X, YouTube ou outras APIs a cada carregamento." />
       <form className="mb-3 flex flex-wrap gap-2">
         <select name="platform" defaultValue={platform} className="h-8 rounded-md border bg-transparent px-2 text-[13px]">
           <option value="">Todas as redes</option>

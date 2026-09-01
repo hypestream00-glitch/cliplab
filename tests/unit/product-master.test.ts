@@ -93,14 +93,15 @@ describe("whisper language", () => {
 });
 
 describe("processing email templates", () => {
-  it("renders CLIPLAB processing templates without leaking markup", () => {
+  it("renders CortaClip processing templates without leaking markup", () => {
     const done = renderEmailTemplate("processing-complete", { name: "<b>x</b>", actionUrl: "https://example.com/studio/projects/1" });
     expect(done.subject).toMatch(/pronto/i);
     expect(done.html).toContain("&lt;b&gt;");
     expect(done.text).toContain("clips");
     const failed = renderEmailTemplate("processing-failed", { name: "Ana" });
     expect(failed.subject).toMatch(/processar/i);
-    expect(failed.html).toContain("CLIPLAB");
+    expect(failed.html).toContain("CortaClip");
+    expect(failed.html).not.toContain("CLIPLAB");
   });
 });
 

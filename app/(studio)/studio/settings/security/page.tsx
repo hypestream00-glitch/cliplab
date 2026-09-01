@@ -17,9 +17,9 @@ export default async function SecurityPage({ searchParams }: PageSearchProps) {
   });
   return (
     <div>
-      <PageHeader title="Segurança" description="Sessões e senha da conta CLIPLAB." />
+      <PageHeader title="Segurança" description="Sessões e senha da conta CortaClip." />
       <div className="mb-4">
-        <DevNotice>2FA não está disponível nesta versão. CLIPLAB não finge autenticação em dois fatores.</DevNotice>
+        <DevNotice>2FA não está disponível nesta versão. CortaClip não finge autenticação em dois fatores.</DevNotice>
       </div>
       <div className="mb-6">
         <ChangePasswordForm

@@ -72,7 +72,7 @@ export default async function StudioHomePage() {
         <StatCard
           label="Visualizações"
           value={formatMetricOrEmpty(cliplabViews, cliplabViews != null ? formatNumber(cliplabViews) : "—")}
-          hint={cliplabViews == null ? cliplabViewsEmptyHint() : "Visualizações de conteúdo publicado pelo CLIPLAB."}
+          hint={cliplabViews == null ? cliplabViewsEmptyHint() : "Visualizações de conteúdo publicado pelo CortaClip."}
         />
       </div>
 

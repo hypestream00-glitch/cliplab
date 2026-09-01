@@ -91,7 +91,7 @@ export const SETUP_GUIDES: SetupGuide[] = [
       "Produção: defina RESEND_API_KEY no worker (e no web se o app também enviar).",
       "SMTP_FROM ou EMAIL_FROM continua obrigatório (remetente verificado na Resend).",
       "Sem RESEND_API_KEY, o fallback SMTP local permanece: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD (ou SMTP_PASS) e SMTP_FROM.",
-      "Opcional: SMTP_SECURE=true em porta 465. SMTP_FROM_NAME=CLIPLAB.",
+      "Opcional: SMTP_SECURE=true em porta 465. SMTP_FROM_NAME=CortaClip.",
       "APP_URL deve ser a URL pública do app (links de verificação e senha).",
       "Reinicie o app. E-mails pendentes na outbox serão enviados automaticamente.",
     ],

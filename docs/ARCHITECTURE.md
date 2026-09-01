@@ -1,6 +1,6 @@
 # Arquitetura
 
-CLIPLAB é um monólito Next.js com serviços desacoplados. Não recrie o app: preserve Auth.js, Prisma, R2, Redis/BullMQ, Stripe TEST, Upload-Post e o worker separado.
+CortaClip é um monólito Next.js com serviços desacoplados. Não recrie o app: preserve Auth.js, Prisma, R2, Redis/BullMQ, Stripe TEST, Upload-Post e o worker separado.
 
 ## Superfícies
 

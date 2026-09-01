@@ -1,4 +1,4 @@
-# Deploy CLIPLAB
+# Deploy CortaClip
 
 Dois processos:
 

@@ -1,9 +1,11 @@
+import { defaultClipTitle } from "@/lib/config/brand";
+
 export function youtubePublishLockKey(targetId: string, clipId: string, accountId: string) {
   return `youtube:${targetId}:${clipId}:${accountId}`;
 }
 
 export function composeYouTubeTitle(title: string) {
-  return title.trim().slice(0, 100) || "Clipe CLIPLAB";
+  return title.trim().slice(0, 100) || defaultClipTitle();
 }
 
 export function composeYouTubeDescription(caption: string, hashtags: string[]) {

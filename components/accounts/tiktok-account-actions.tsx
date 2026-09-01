@@ -36,7 +36,7 @@ export function TikTokConfigNotice() {
       {open ? (
         <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-100">
           TikTok: configuração necessária. Defina TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET e TIKTOK_REDIRECT_URI no servidor.
-          CLIPLAB não simula OAuth e não pede senha/cookie do TikTok. Veja docs/TIKTOK-INTEGRATION.md.
+          CortaClip não simula OAuth e não pede senha/cookie do TikTok. Veja docs/TIKTOK-INTEGRATION.md.
         </div>
       ) : null}
     </div>
@@ -53,7 +53,7 @@ export function YouTubeConfigNotice() {
       {open ? (
         <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-100">
           YouTube: configuração necessária. Defina GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET (ou AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET)
-          no servidor. CLIPLAB não pede senha Google nem usa scraping. Veja docs/YOUTUBE-INTEGRATION.md.
+          no servidor. CortaClip não pede senha Google nem usa scraping. Veja docs/YOUTUBE-INTEGRATION.md.
         </div>
       ) : null}
     </div>
@@ -70,7 +70,7 @@ export function XConfigNotice() {
       {open ? (
         <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-100">
           X: configuração necessária. Defina X_CLIENT_ID, X_CLIENT_SECRET e X_REDIRECT_URI no servidor. Publicação exige
-          plano Basic/Pro/Enterprise da API. CLIPLAB não finge OAuth. Veja docs/X-INTEGRATION.md.
+          plano Basic/Pro/Enterprise da API. CortaClip não finge OAuth. Veja docs/X-INTEGRATION.md.
         </div>
       ) : null}
     </div>
@@ -87,7 +87,7 @@ export function MetaConfigNotice({ platform }: { platform: "INSTAGRAM" | "FACEBO
       </Button>
       {open ? (
         <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-100">
-          {label} — Configuração necessária. Defina META_APP_ID e META_APP_SECRET no servidor. CLIPLAB não pede senha,
+          {label} — Configuração necessária. Defina META_APP_ID e META_APP_SECRET no servidor. CortaClip não pede senha,
           cookie nem token manual. Veja docs/META-INTEGRATION.md.
         </div>
       ) : null}
