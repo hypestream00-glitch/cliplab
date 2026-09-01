@@ -9,6 +9,7 @@ import { rateLimitAsync } from "@/lib/security/rate-limit";
 import { gracePeriodEndsAt } from "@/lib/billing/policy";
 import { subscriptionPriceId } from "@/lib/billing/stripe-client";
 import { productPlanCode } from "@/lib/config/plans";
+import { maybeGrantReferralReward } from "@/lib/referral/reward";
 import {
   notifyPaymentFailed,
   notifySubscriptionActivated,
@@ -99,6 +100,14 @@ async function dispatchStripeEvent(stripe: Stripe, event: Stripe.Event) {
       const planCode = applied.planCode;
       if (event.type === "customer.subscription.created") {
         await notifySubscriptionActivated({ workspaceId: applied.workspaceId, subscription, planCode });
+        if (subscription.status === "active") {
+          await maybeGrantReferralReward({
+            referredWorkspaceId: applied.workspaceId,
+            stripeEventId: event.id,
+            paidAmount: 1,
+            planCode,
+          });
+        }
         return;
       }
       if (event.type === "customer.subscription.deleted") {
@@ -124,6 +133,7 @@ async function dispatchStripeEvent(stripe: Stripe, event: Stripe.Event) {
     case "invoice.paid": {
       const invoice = event.data.object as Stripe.Invoice;
       await recordInvoice(invoice, "paid");
+      await maybeRewardFromInvoice(invoice, event.id);
       return;
     }
     case "invoice.payment_failed": {
@@ -149,6 +159,26 @@ async function dispatchStripeEvent(stripe: Stripe, event: Stripe.Event) {
     default:
       return;
   }
+}
+
+async function maybeRewardFromInvoice(invoice: Stripe.Invoice, eventId: string) {
+  const paid = invoice.amount_paid ?? 0;
+  if (paid <= 0) return;
+  const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+  const subscriptionId = invoiceSubscriptionId(invoice);
+  const existing = await findWorkspaceForStripeCustomer({
+    stripeCustomerId: customerId,
+    stripeSubscriptionId: subscriptionId,
+    metadataWorkspaceId: invoice.metadata?.workspaceId,
+  });
+  if (!existing) return;
+  await maybeGrantReferralReward({
+    referredWorkspaceId: existing.workspaceId,
+    stripeEventId: eventId,
+    stripeInvoiceId: invoice.id,
+    paidAmount: paid,
+    planCode: existing.plan.code,
+  });
 }
 
 function invoiceSubscriptionId(invoice: Stripe.Invoice) {

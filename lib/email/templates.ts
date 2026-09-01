@@ -11,7 +11,8 @@ export type EmailTemplateId =
   | "subscription-canceled"
   | "payment-failed"
   | "processing-complete"
-  | "processing-failed";
+  | "processing-failed"
+  | "referral-reward";
 
 export type EmailTemplateVars = {
   name?: string;
@@ -177,6 +178,18 @@ export function renderEmailTemplate(id: EmailTemplateId, vars: EmailTemplateVars
         `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">O job falhou. Nada foi cobrado duas vezes pelo mesmo processamento. Abra o projeto para ver o status e tentar de novo.</p>`,
         text,
         { label: "Abrir projeto", href: projectUrl },
+      );
+      return { id, subject, html, text };
+    }
+    case "referral-reward": {
+      const ctaUrl = vars.actionUrl ?? brand.url;
+      const subject = `Você ganhou 7 dias de Pro no ${brand.name} 🎉`;
+      const text = `${hello},\n\nUma pessoa indicada por você realizou a primeira assinatura.\nVocê recebeu +7 dias de ${brand.name} Pro.\n${ctaUrl}`;
+      const html = layout(
+        `Você ganhou 7 dias de Pro`,
+        `<p style="margin:0;font-size:15px;line-height:1.6;color:#d4d4d8">${escapeHtml(hello)},</p><p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#d4d4d8">Uma pessoa indicada por você realizou a primeira assinatura. Você recebeu <strong style="color:#fff">+7 dias de ${escapeHtml(brand.name)} Pro</strong>.</p>`,
+        text,
+        { label: `Acessar ${brand.name}`, href: ctaUrl },
       );
       return { id, subject, html, text };
     }

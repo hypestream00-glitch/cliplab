@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { registerAction } from "@/app/(auth)/actions";
 
-export function RegisterForm() {
+export function RegisterForm({ referralCode }: { referralCode?: string }) {
   const [state, action, pending] = useActionState(registerAction, null);
   return (
     <div className="mx-auto w-full max-w-[400px]">
@@ -18,6 +18,7 @@ export function RegisterForm() {
         <p className="mt-1 text-[13px] text-muted-foreground">Comece com um workspace pessoal.</p>
       </div>
       <form action={action} className="space-y-3">
+        {referralCode ? <input type="hidden" name="ref" value={referralCode} /> : null}
         <div className="space-y-1.5">
           <Label htmlFor="name">Nome</Label>
           <Input id="name" name="name" required autoComplete="name" />

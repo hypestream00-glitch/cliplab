@@ -64,7 +64,7 @@ export function StatCard({
         <p className="text-[12px] text-muted-foreground">{label}</p>
         {badge}
       </div>
-      <p className="mt-1 text-[20px] leading-6 font-semibold tracking-tight">{value}</p>
+      <p className="mt-1 text-[20px] leading-6 font-semibold tracking-tight gradient-brand-text">{value}</p>
       {hint ? <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p> : null}
     </div>
   );
@@ -72,26 +72,28 @@ export function StatCard({
 
 export function StatusBadge({ status }: { status: string }) {
   const tone: Record<string, string> = {
-    READY: "bg-emerald-500/15 text-emerald-300",
+    READY: "bg-violet-500/15 text-violet-300",
     PUBLISHED: "bg-emerald-500/15 text-emerald-300",
     CONNECTED: "bg-emerald-500/15 text-emerald-300",
     LIVE: "bg-red-500/15 text-red-300",
-            PROCESSING: "bg-amber-500/15 text-amber-300",
-    TRANSCRIBING: "bg-amber-500/15 text-amber-300",
-    ANALYZING: "bg-amber-500/15 text-amber-300",
-    GENERATING: "bg-amber-500/15 text-amber-300",
-    PROBING: "bg-amber-500/15 text-amber-300",
-    AUDIO_EXTRACTING: "bg-amber-500/15 text-amber-300",
-    CLIPPING: "bg-amber-500/15 text-amber-300",
+    PROCESSING: "bg-sky-500/15 text-sky-300",
+    TRANSCRIBING: "bg-sky-500/15 text-sky-300",
+    ANALYZING: "bg-sky-500/15 text-sky-300",
+    GENERATING: "bg-sky-500/15 text-sky-300",
+    PROBING: "bg-sky-500/15 text-sky-300",
+    AUDIO_EXTRACTING: "bg-sky-500/15 text-sky-300",
+    CLIPPING: "bg-sky-500/15 text-sky-300",
     QUEUED: "bg-sky-500/15 text-sky-300",
-    SCHEDULED: "bg-sky-500/15 text-sky-300",
+    WAITING: "bg-sky-500/15 text-sky-300",
+    ACTIVE: "bg-sky-500/15 text-sky-300",
+    SCHEDULED: "bg-yellow-500/15 text-yellow-300",
     FAILED: "bg-red-500/15 text-red-300",
     TOKEN_EXPIRING: "bg-amber-500/15 text-amber-200",
     REAUTH_REQUIRED: "bg-amber-500/15 text-amber-200",
     CONFIGURATION_REQUIRED: "bg-amber-500/15 text-amber-200",
     EXPIRED: "bg-red-500/15 text-red-300",
     ERROR: "bg-red-500/15 text-red-300",
-    UPLOADING: "bg-amber-500/15 text-amber-300",
+    UPLOADING: "bg-sky-500/15 text-sky-300",
     DRAFT: "bg-muted text-muted-foreground",
     OFFLINE: "bg-muted text-muted-foreground",
     CANCELED: "bg-muted text-muted-foreground",

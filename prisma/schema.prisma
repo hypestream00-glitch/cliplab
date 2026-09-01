@@ -250,6 +250,12 @@ model User {
   apiKeys            ApiKey[]
   championshipsOwned Championship[]        @relation("ChampionshipOwner")
   clipSubmissions    ClipSubmission[]
+  promoRedemptions   PromoRedemption[]
+  referralProfile    ReferralProfile?
+  referralsMade      ReferralAttribution[] @relation("Referrer")
+  referredBy         ReferralAttribution?  @relation("Referred")
+  referralRewards    ReferralReward[]      @relation("ReferralRewardReferrer")
+  workspaceGrants    WorkspaceGrant[]
 
   @@index([createdAt])
   @@index([role])
@@ -365,6 +371,9 @@ model Workspace {
   renderJobs         RenderJob[]
   usageEvents        UsageEvent[]
   uploadSessions     UploadSession[]
+  promoRedemptions   PromoRedemption[]
+  grants             WorkspaceGrant[]
+  referralRewards    ReferralReward[]
 
   @@index([createdAt])
 }
@@ -1276,6 +1285,108 @@ model ProcessedWebhookEvent {
   createdAt DateTime @default(now())
 
   @@index([provider, createdAt])
+}
+
+model PromoCode {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  name           String
+  description    String?
+  active         Boolean   @default(true)
+  benefitType    String    @default("PLAN_GRANT")
+  grantPlanCode  PlanCode
+  benefitDays    Int
+  maxRedemptions Int?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  redemptions    PromoRedemption[]
+}
+
+model PromoRedemption {
+  id          String   @id @default(cuid())
+  promoCodeId String
+  userId      String
+  workspaceId String
+  grantId     String   @unique
+  redeemedAt  DateTime @default(now())
+
+  promoCode PromoCode      @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  grant     WorkspaceGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  @@unique([promoCodeId, userId])
+  @@index([promoCodeId, redeemedAt])
+  @@index([workspaceId])
+}
+
+model WorkspaceGrant {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String?
+  source      String
+  sourceKey   String?
+  planCode    PlanCode
+  startsAt    DateTime @default(now())
+  endsAt      DateTime
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  redemption  PromoRedemption?
+  reward      ReferralReward?
+
+  @@index([workspaceId, endsAt])
+  @@index([source, sourceKey])
+}
+
+model ReferralProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ReferralAttribution {
+  id             String    @id @default(cuid())
+  referrerUserId String
+  referredUserId String    @unique
+  code           String
+  attributedAt   DateTime  @default(now())
+  convertedAt    DateTime?
+
+  referrer User            @relation("Referrer", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  referred User            @relation("Referred", fields: [referredUserId], references: [id], onDelete: Cascade)
+  reward   ReferralReward?
+
+  @@index([referrerUserId])
+  @@index([code])
+}
+
+model ReferralReward {
+  id               String   @id @default(cuid())
+  attributionId    String   @unique
+  referrerUserId   String
+  referredUserId   String
+  workspaceId      String
+  grantId          String   @unique
+  stripeEventId    String?  @unique
+  stripeInvoiceId  String?
+  days             Int      @default(7)
+  status           String   @default("GRANTED")
+  createdAt        DateTime @default(now())
+
+  attribution ReferralAttribution @relation(fields: [attributionId], references: [id], onDelete: Cascade)
+  referrer    User                @relation("ReferralRewardReferrer", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  grant       WorkspaceGrant      @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  @@index([referrerUserId])
+  @@index([workspaceId])
 }
 
 enum EmailOutboxStatus {

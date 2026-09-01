@@ -16,11 +16,15 @@ export default async function CreateProjectPage() {
   return (
     <div>
       <PageHeader
-        title="Criar clips com IA"
+        title="Criar clips com IA ✨"
         description="Envie um vídeo e deixe a IA encontrar os melhores momentos."
       />
-      <p className="mb-4 text-[13px] text-muted-foreground">
-        {formatMinutesUsed(usage.usedSeconds, limits.monthlyMinutes)} · até {limits.maxClipsPerProject} clips · {limits.maxResolution}
+      <p className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
+        <span>◷ {formatMinutesUsed(usage.usedSeconds, limits.monthlyMinutes)}</span>
+        <span aria-hidden>•</span>
+        <span>até {limits.maxClipsPerProject} clips</span>
+        <span aria-hidden>•</span>
+        <span>▣ {limits.maxResolution}</span>
       </p>
       {blocked ? (
         <div className="rounded-2xl border bg-card p-6 text-center">

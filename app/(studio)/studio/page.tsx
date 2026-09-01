@@ -77,12 +77,26 @@ export default async function StudioHomePage() {
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <article className="rounded-2xl border bg-card p-4">
+        <article className="rounded-2xl border bg-card p-4 hover:border-primary/40">
           <p className="text-[12px] text-muted-foreground">Plano atual</p>
-          <p className="mt-1 text-[16px] font-semibold">{usage.limits.name}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <p className="text-[16px] font-semibold">{usage.limits.name}</p>
+            {usage.activeGrant ? (
+              <span className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-1.5 py-0.5 text-[10px] text-yellow-300">
+                🎁 Benefício ativo
+              </span>
+            ) : null}
+          </div>
           <p className="mt-1 text-[13px] text-muted-foreground">
             {formatMinutesUsed(usage.usedSeconds, usage.limits.monthlyMinutes)}
           </p>
+          {usage.activeGrant ? (
+            <p className="mt-1 text-[12px] text-yellow-400/90">
+              {usage.activeGrant.source === "REFERRAL"
+                ? `${usage.activeGrant.daysLeft} dia${usage.activeGrant.daysLeft === 1 ? "" : "s"} de Pro restantes`
+                : `${usage.activeGrant.daysLeft} dia${usage.activeGrant.daysLeft === 1 ? "" : "s"} grátis restantes`}
+            </p>
+          ) : null}
           <Link href="/studio/settings/billing" className="mt-2 inline-block text-[12px] text-primary hover:underline">
             Gerenciar plano
           </Link>
@@ -132,7 +146,7 @@ export default async function StudioHomePage() {
             {projects.map((project) => {
               const thumb = mediaUrl(project.sourceVideo?.thumbnailKey);
               return (
-                <article key={project.id} className="flex gap-3 rounded-2xl border bg-card p-3">
+                <article key={project.id} className="flex gap-3 rounded-2xl border bg-card p-3 hover:border-primary/40">
                   {thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={thumb} alt="" className="size-16 shrink-0 rounded-lg object-cover" />

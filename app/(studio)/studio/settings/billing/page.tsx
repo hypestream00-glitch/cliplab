@@ -12,6 +12,7 @@ import { subscriptionStatusLabel } from "@/lib/billing/stripe-status";
 import type { PageSearchProps } from "@/types/routes";
 import { getMonthlyUsage, formatMinutesUsed } from "@/lib/billing/usage";
 import { visibleSocialAccountWhere } from "@/lib/data/visibility";
+import { PromoRedeemForm } from "@/components/billing/promo-redeem-form";
 import Link from "next/link";
 
 export default async function BillingPage({ searchParams }: PageSearchProps) {
@@ -129,6 +130,7 @@ export default async function BillingPage({ searchParams }: PageSearchProps) {
           Ver comparação de planos
         </Link>
       </p>
+      <PromoRedeemForm endsAt={usage.activeGrant?.source === "PROMO" ? usage.activeGrant.endsAt : null} />
     </div>
   );
 }

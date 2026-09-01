@@ -14,6 +14,7 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     subscription: { findUnique: (...args: unknown[]) => findUnique(...args) },
     socialAccount: { count: (...args: unknown[]) => count(...args) },
+    workspaceGrant: { findMany: async () => [] },
   },
 }));
 

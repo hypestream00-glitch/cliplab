@@ -1,12 +1,15 @@
 import { hashPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/db/prisma";
 import { ensureProductPlans } from "@/lib/billing/ensure-plans";
+import { ensurePromoCodes } from "@/lib/promo/ensure";
 import { issueAuthToken } from "@/lib/email/tokens";
 import { sendVerificationEmail } from "@/lib/email/send";
 import { logger } from "@/lib/logger";
 import { withTimeout } from "@/lib/async/timeout";
 import { isPrismaUniqueViolation } from "@/lib/webhooks/idempotency";
 import { isPublicHttpsUrl } from "@/lib/env/app-url";
+import { ensureReferralProfile } from "@/lib/referral/profile";
+import { attributeReferral } from "@/lib/referral/attribute";
 
 export const SIGNUP_LOG = {
   start: "SIGNUP START",
@@ -44,7 +47,8 @@ export async function provisionWorkspace(user: { id: string; name: string | null
       members: { create: { userId: user.id, role: "OWNER" } },
     },
   });
-  await ensureProductPlans();
+    await ensureProductPlans();
+    await ensurePromoCodes();
   const free = await prisma.plan.findUnique({ where: { code: "FREE" } });
   if (free) {
     const now = new Date();
@@ -77,6 +81,7 @@ export type CompleteSignupInput = {
   name: string;
   email: string;
   password: string;
+  referralCode?: string | null;
 };
 
 export type CompleteSignupResult =
@@ -120,6 +125,10 @@ export async function completeSignup(input: CompleteSignupInput): Promise<Comple
     const workspace = await withTimeout(provisionWorkspace(user), 12_000, "signup workspace");
     logger.info({ workspaceId: workspace.id }, SIGNUP_LOG.workspaceCreated);
     scheduleUploadPostProvisioning(workspace.id);
+    await ensureReferralProfile(user.id).catch(() => undefined);
+    if (input.referralCode) {
+      await attributeReferral({ referredUserId: user.id, code: input.referralCode }).catch(() => undefined);
+    }
 
     try {
       const rawToken = await issueAuthToken("verify", email);

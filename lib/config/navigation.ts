@@ -40,9 +40,9 @@ export const studioNavGroups: NavGroup[] = [
     id: "main",
     items: [
       { href: "/studio", label: "Dashboard", icon: Home },
-      { href: "/studio/create", label: "Criar", icon: Sparkles },
       { href: "/studio/projects", label: "Projetos", icon: FolderKanban },
       { href: "/studio/clips", label: "Meus clips", icon: Scissors },
+      { href: "/studio/create", label: "Criar", icon: Sparkles },
       { href: "/studio/publishing", label: "Publicar", icon: Send },
       { href: "/studio/calendar", label: "Calendário", icon: CalendarDays },
       { href: "/studio/accounts", label: "Contas sociais", icon: Share2 },

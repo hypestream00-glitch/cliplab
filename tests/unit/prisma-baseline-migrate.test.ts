@@ -15,6 +15,8 @@ const FAILED_DB = "cliplab_migrate_failed";
 const LEGACY_DB = "cliplab_migrate_legacy";
 const FIRST_MIGRATION = "20260901034100_add_processing_job";
 const RECONCILE_MIGRATION = "20260901050500_reconcile_full_schema";
+const PROMO_MIGRATION = "20260901210000_promo_and_referral";
+const ALL_MIGRATIONS = [FIRST_MIGRATION, RECONCILE_MIGRATION, PROMO_MIGRATION];
 const FIRST_SQL = readFileSync(path.resolve("prisma/migrations", FIRST_MIGRATION, "migration.sql"), "utf8");
 const SCHEMA = readFileSync(path.resolve("prisma/schema.prisma"), "utf8");
 const SCHEMA_MODELS = [...SCHEMA.matchAll(/^model (\w+)/gm)].map((match) => match[1]);
@@ -206,7 +208,7 @@ describe("local Postgres migrate deploy (never production)", () => {
       const applied = await client.query<{ migration_name: string; finished_at: Date | null }>(
         `SELECT migration_name, finished_at FROM "_prisma_migrations" ORDER BY migration_name`,
       );
-      expect(applied.rows.map((row) => row.migration_name)).toEqual([FIRST_MIGRATION, RECONCILE_MIGRATION]);
+      expect(applied.rows.map((row) => row.migration_name)).toEqual(ALL_MIGRATIONS);
       expect(applied.rows.every((row) => row.finished_at != null)).toBe(true);
     });
 
@@ -391,7 +393,7 @@ describe("local Postgres migrate deploy (never production)", () => {
       const applied = await client.query<{ migration_name: string; finished_at: Date | null }>(
         `SELECT migration_name, finished_at FROM "_prisma_migrations" WHERE finished_at IS NOT NULL`,
       );
-      expect(applied.rows.map((row) => row.migration_name).sort()).toEqual([FIRST_MIGRATION, RECONCILE_MIGRATION]);
+      expect(applied.rows.map((row) => row.migration_name).sort()).toEqual([...ALL_MIGRATIONS].sort());
     });
     await assertPrismaModels(dbUrl(FAILED_DB));
   }, 90_000);

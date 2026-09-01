@@ -5,15 +5,18 @@ import { Button } from "@/components/ui/button";
 import { AppBreadcrumb } from "@/components/layout/breadcrumb";
 import { NotificationCenter, type NotificationItem } from "@/components/layout/notification-center";
 import { UserMenu } from "@/components/layout/user-menu";
+import { ReferralButton, type ReferralModalProps } from "@/components/layout/referral-button";
 
 export function Topbar({
   user,
   notifications,
+  referral,
   onToggleCollapsed,
   onOpenMobile,
 }: {
   user: { name?: string | null; email?: string | null; image?: string | null };
   notifications: NotificationItem[];
+  referral?: ReferralModalProps | null;
   onToggleCollapsed: () => void;
   onOpenMobile: () => void;
 }) {
@@ -27,6 +30,7 @@ export function Topbar({
       </Button>
       <AppBreadcrumb />
       <div className="ml-auto flex items-center gap-1.5">
+        {referral ? <ReferralButton {...referral} /> : null}
         <NotificationCenter items={notifications} />
         <div className="md:hidden">
           <UserMenu name={user.name} email={user.email} image={user.image} />

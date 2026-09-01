@@ -7,6 +7,7 @@ import { createBillingPortal, startPlanCheckout } from "@/lib/billing/stripe";
 import { parseCheckoutPlan } from "@/lib/billing/plan-from-price";
 import { rateLimitGuard } from "@/lib/security/guard";
 import { publicBaseUrl } from "@/lib/env/app-url";
+import { redeemPromoCode, redeemPromoMessage } from "@/lib/promo/redeem";
 
 export async function changePlanAction(formData: FormData) {
   const limited = await rateLimitGuard("billing-checkout", 8, 60_000);
@@ -56,4 +57,24 @@ export async function manageSubscriptionAction() {
     redirect(result.url);
   }
   redirect("/studio/settings/billing?payments=configuring");
+}
+
+export async function redeemPromoAction(_prev: unknown, formData: FormData) {
+  const limited = await rateLimitGuard("promo-redeem", 8, 15 * 60_000);
+  if (limited) return { error: limited.error };
+  const ctx = await requireBillingOwner();
+  const result = await redeemPromoCode({
+    userId: ctx.user.id,
+    workspaceId: ctx.workspace.id,
+    code: String(formData.get("code") ?? ""),
+  });
+  if (!result.ok) return { error: redeemPromoMessage(result) };
+  revalidatePath("/studio/settings/billing");
+  revalidatePath("/studio");
+  return {
+    ok: true as const,
+    message: "Cupom aplicado! Você ganhou 3 dias grátis no CortaClip.",
+    endsAt: result.endsAt.toISOString(),
+    days: result.days,
+  };
 }

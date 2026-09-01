@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 import { CreditsWidget } from "@/components/layout/credits-widget";
+import { CouponCard } from "@/components/layout/coupon-card";
 import { UserMenu } from "@/components/layout/user-menu";
-import { Button } from "@/components/ui/button";
 import { initials } from "@/lib/utils/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Workspace, WorkspaceMember } from "@/generated/prisma/client";
@@ -24,6 +24,8 @@ type Props = {
   planName: string;
   workspaceName: string;
   usageLabel?: string;
+  usagePercent?: number;
+  grantLabel?: string | null;
   user: { name?: string | null; email?: string | null; image?: string | null };
   onNavigate?: () => void;
 };
@@ -54,6 +56,8 @@ export function Sidebar({
   planName,
   workspaceName,
   usageLabel,
+  usagePercent,
+  grantLabel,
   user,
   onNavigate,
 }: Props) {
@@ -71,20 +75,26 @@ export function Sidebar({
     >
       <div className={cn("flex h-14 items-center border-b border-sidebar-border px-3", collapsed && "justify-center px-0")}>
         <Link href="/studio" className="flex items-center gap-2.5" onClick={onNavigate}>
-          <span className="flex size-8 items-center justify-center rounded-xl bg-primary text-[11px] font-semibold text-primary-foreground">
-            {brand.shortName}
+          <span className="flex size-8 items-center justify-center rounded-xl gradient-brand text-[13px] font-bold text-white">
+            C
           </span>
           {!collapsed && <span className="text-[14px] font-semibold tracking-tight">{brand.name}</span>}
         </Link>
       </div>
 
       <div className={cn("px-2 pt-3", collapsed && "px-1.5")}>
-        <Button asChild className={cn("w-full", collapsed && "px-0")}>
-          <Link href="/studio/create" onClick={onNavigate} aria-label="Novo projeto">
-            <Plus className="size-4" />
-            {!collapsed && <span>Novo projeto</span>}
-          </Link>
-        </Button>
+        <Link
+          href="/studio/create"
+          onClick={onNavigate}
+          aria-label="Novo projeto"
+          className={cn(
+            "inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg gradient-brand text-[13px] font-semibold text-white transition hover:opacity-90",
+            collapsed && "px-0",
+          )}
+        >
+          <Plus className="size-4" />
+          {!collapsed && <span>Novo projeto</span>}
+        </Link>
       </div>
 
       <nav className="mt-2 flex-1 overflow-y-auto px-2 pb-3" aria-label="Navegação principal">
@@ -101,11 +111,11 @@ export function Sidebar({
                     "mb-0.5 flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors",
                     collapsed && "justify-center px-0",
                     active
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      ? "bg-sidebar-accent text-white glow-nav"
                       : "text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
                   )}
                 >
-                  <Icon className="size-4 shrink-0" />
+                  <Icon className={cn("size-4 shrink-0", active && "text-white")} />
                   {!collapsed && <span className="truncate">{item.label}</span>}
                 </Link>
               );
@@ -121,9 +131,17 @@ export function Sidebar({
         ))}
       </nav>
 
-      <div className="space-y-1 border-t border-sidebar-border p-2">
+      <div className="space-y-2 border-t border-sidebar-border p-2">
+        <CouponCard collapsed={collapsed} />
         <WorkspaceSwitcher collapsed={collapsed} workspaces={workspaces} currentWorkspaceId={currentWorkspaceId} />
-        <CreditsWidget collapsed={collapsed} credits={credits} planName={planName} usageLabel={usageLabel} />
+        <CreditsWidget
+          collapsed={collapsed}
+          credits={credits}
+          planName={planName}
+          usageLabel={usageLabel}
+          usagePercent={usagePercent}
+          grantLabel={grantLabel}
+        />
         <div className={cn("flex items-center gap-2 rounded-lg px-2 py-1.5", collapsed && "justify-center px-0")}>
           {collapsed ? (
             <UserMenu name={user.name} email={user.email} image={user.image} workspaceName={workspaceName} planName={planName} />

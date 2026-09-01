@@ -13,9 +13,21 @@ const reconcileSql = readFileSync(
   path.join(migrationsDir, "20260901050500_reconcile_full_schema/migration.sql"),
   "utf8",
 );
+const promoSql = readFileSync(
+  path.join(migrationsDir, "20260901210000_promo_and_referral/migration.sql"),
+  "utf8",
+);
 
 const schemaModels = [...schema.matchAll(/^model (\w+)/gm)].map((match) => match[1]);
 const schemaEnums = [...schema.matchAll(/^enum (\w+)/gm)].map((match) => match[1]);
+const additiveModels = [
+  "PromoCode",
+  "PromoRedemption",
+  "WorkspaceGrant",
+  "ReferralProfile",
+  "ReferralAttribution",
+  "ReferralReward",
+];
 
 describe("CLIPLAB Prisma schema audit and reconciliation", () => {
   it("has no Video model; media source is SourceVideo", () => {
@@ -25,16 +37,24 @@ describe("CLIPLAB Prisma schema audit and reconciliation", () => {
     expect(schema).not.toMatch(/@map\(/);
   });
 
-  it("keeps two versioned migrations: applied ProcessingJob baseline plus new reconciliation", () => {
+  it("keeps versioned migrations: ProcessingJob, reconciliation, then additive promo/referral", () => {
     const names = readdirSync(migrationsDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort();
-    expect(names).toEqual(["20260901034100_add_processing_job", "20260901050500_reconcile_full_schema"]);
+    expect(names).toEqual([
+      "20260901034100_add_processing_job",
+      "20260901050500_reconcile_full_schema",
+      "20260901210000_promo_and_referral",
+    ]);
   });
 
   it("covers every Prisma model and enum in the reconciliation SQL", () => {
     for (const model of schemaModels) {
+      if (additiveModels.includes(model)) {
+        expect(promoSql).toContain(`CREATE TABLE "${model}"`);
+        continue;
+      }
       expect(reconcileSql).toContain(`CREATE TABLE IF NOT EXISTS "${model}"`);
     }
     for (const enumName of schemaEnums) {
@@ -57,7 +77,7 @@ describe("CLIPLAB Prisma schema audit and reconciliation", () => {
   });
 
   it("never drops, truncates, force-resets, or marks migrations applied in SQL", () => {
-    for (const sql of [processingJobSql, reconcileSql]) {
+    for (const sql of [processingJobSql, reconcileSql, promoSql]) {
       expect(sql).not.toMatch(/\bDROP TABLE\b/i);
       expect(sql).not.toMatch(/\bDROP COLUMN\b/i);
       expect(sql).not.toMatch(/\bTRUNCATE TABLE\b/i);
@@ -68,6 +88,8 @@ describe("CLIPLAB Prisma schema audit and reconciliation", () => {
       expect(sql).not.toContain("force-reset");
       expect(sql).not.toContain("RENATO");
     }
+    expect(promoSql).toContain("ON CONFLICT");
+    expect(promoSql).toContain("MUGAO12");
   });
 
   it("is what worker recovery queries after schema exists", () => {

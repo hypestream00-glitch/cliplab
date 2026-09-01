@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { formatBytes, formatDuration } from "@/lib/utils/format";
 import { friendlyError } from "@/lib/ui/friendly-error";
 import { cn } from "@/lib/utils";
+import { CloudUpload, Loader2, Minus, Plus, Sparkles } from "lucide-react";
 
 const MODES = [
   { value: "AUTOMATIC", label: "Automático" },
@@ -87,6 +86,10 @@ export function CreateProjectForm({
 }) {
   const router = useRouter();
   const [advanced, setAdvanced] = useState(false);
+  const [sourceTab, setSourceTab] = useState<"file" | "link">("file");
+  const [clipCount, setClipCount] = useState(Math.min(5, maxClipsPerProject));
+  const [duration, setDuration] = useState("15-30");
+  const [aspect, setAspect] = useState("9:16");
   const [fileMeta, setFileMeta] = useState<FileMeta | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [phase, setPhase] = useState<UploadPhase>("idle");
@@ -312,10 +315,32 @@ export function CreateProjectForm({
 
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-6">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          className={cn(
+            "h-9 rounded-lg border px-3 text-[13px] font-medium",
+            sourceTab === "file" ? "border-primary/50 bg-primary/15 text-white" : "text-muted-foreground",
+          )}
+          onClick={() => setSourceTab("file")}
+        >
+          Arquivo
+        </button>
+        <button
+          type="button"
+          className="h-9 rounded-lg border px-3 text-[13px] font-medium text-muted-foreground"
+          disabled
+          aria-disabled="true"
+          title="Em breve"
+        >
+          Link <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase">Em breve</span>
+        </button>
+      </div>
+
       <label
         className={cn(
-          "flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed bg-card px-6 text-center transition-colors",
-          dragOver && "border-primary bg-primary/5",
+          "relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-3xl bg-[#07070a] px-6 text-center gradient-border",
+          dragOver && "bg-primary/5",
         )}
         onDragOver={(event) => {
           event.preventDefault();
@@ -333,8 +358,30 @@ export function CreateProjectForm({
           readFile(file);
         }}
       >
+        <span className="pointer-events-none absolute inset-y-8 left-0 w-24 opacity-40" aria-hidden>
+          <svg viewBox="0 0 120 220" className="h-full w-full">
+            <circle cx="20" cy="40" r="48" fill="url(#g1)" />
+            <defs>
+              <radialGradient id="g1">
+                <stop offset="0%" stopColor="#E92ACB" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="#E92ACB" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+          </svg>
+        </span>
+        <span className="pointer-events-none absolute inset-y-8 right-0 w-24 opacity-40" aria-hidden>
+          <svg viewBox="0 0 120 220" className="h-full w-full">
+            <circle cx="100" cy="180" r="54" fill="url(#g2)" />
+            <defs>
+              <radialGradient id="g2">
+                <stop offset="0%" stopColor="#2563EB" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+          </svg>
+        </span>
         {fileMeta ? (
-          <div className="flex w-full max-w-md items-center gap-4 text-left">
+          <div className="relative z-10 flex w-full max-w-md items-center gap-4 text-left">
             {fileMeta.preview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={fileMeta.preview} alt="" className="h-28 w-16 rounded-lg object-cover" />
@@ -351,20 +398,21 @@ export function CreateProjectForm({
               {statusLabel ? <p className="mt-2 text-[12px] text-primary">{statusLabel}</p> : <p className="mt-2 text-[12px] text-muted-foreground">Clique para trocar o arquivo</p>}
               {phase === "uploading" ? (
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full bg-primary transition-[width]" style={{ width: `${progress}%` }} />
+                  <div className="h-full gradient-brand transition-[width]" style={{ width: `${progress}%` }} />
                 </div>
               ) : null}
             </div>
           </div>
         ) : (
-          <>
-            <p className="text-[16px] font-medium">Arraste seu vídeo aqui</p>
+          <div className="relative z-10">
+            <CloudUpload className="mx-auto size-10 text-primary" aria-hidden />
+            <p className="mt-3 text-[16px] font-medium">Arraste seu vídeo aqui</p>
             <p className="mt-1 text-[13px] text-muted-foreground">ou</p>
-            <span className="mt-3 inline-flex h-9 items-center rounded-lg bg-primary px-3 text-[13px] font-medium text-primary-foreground">
+            <span className="mt-3 inline-flex h-9 items-center rounded-lg gradient-brand px-3 text-[13px] font-medium text-white">
               Selecionar vídeo
             </span>
             <p className="mt-3 text-[12px] text-muted-foreground">MP4, MOV ou WEBM — envio direto ao storage</p>
-          </>
+          </div>
         )}
         <input
           ref={inputRef}
@@ -378,72 +426,115 @@ export function CreateProjectForm({
       </label>
 
       <div className="rounded-2xl border bg-card p-4">
-        <label className="flex cursor-pointer items-start gap-3">
-          <input type="radio" name="experience" className="mt-1 accent-primary" defaultChecked onChange={() => setAdvanced(false)} />
-          <span>
-            <span className="block text-[14px] font-medium">Modo automático</span>
-            <span className="mt-0.5 block text-[13px] text-muted-foreground">
-              Recomendado — a IA escolhe automaticamente os melhores momentos e configura os clips.
+        <p className="text-[14px] font-semibold">Configurações de criação</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className={cn("cursor-pointer rounded-xl border p-3", !advanced && "border-primary/60 bg-primary/10")}>
+            <input type="radio" name="experience" className="sr-only" defaultChecked onChange={() => setAdvanced(false)} />
+            <span className="flex items-center justify-between gap-2">
+              <span className="text-[14px] font-medium">Modo automático</span>
+              <span className="rounded-md gradient-brand px-1.5 py-0.5 text-[10px] font-semibold text-white">RECOMENDADO</span>
             </span>
-          </span>
-        </label>
-        <label className="mt-3 flex cursor-pointer items-start gap-3">
-          <input type="radio" name="experience" className="mt-1 accent-primary" onChange={() => setAdvanced(true)} />
-          <span className="text-[14px] font-medium">Personalizar</span>
-        </label>
+            <span className="mt-1 block text-[12px] text-muted-foreground">
+              A IA escolhe automaticamente os melhores momentos e configura os clips.
+            </span>
+          </label>
+          <label className={cn("cursor-pointer rounded-xl border p-3", advanced && "border-primary/60 bg-primary/10")}>
+            <input type="radio" name="experience" className="sr-only" onChange={() => setAdvanced(true)} />
+            <span className="text-[14px] font-medium">Personalizar</span>
+            <span className="mt-1 block text-[12px] text-muted-foreground">Ajuste todas as preferências manualmente.</span>
+          </label>
+        </div>
 
         {!advanced ? (
           <>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="clipCountSimple">Quantidade de clips (máx. {maxClipsPerProject})</Label>
-                <Input id="clipCountSimple" name="clipCount" type="number" defaultValue={Math.min(8, maxClipsPerProject)} min={1} max={maxClipsPerProject} />
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-[13px] font-medium">Quantidade de clips (máx. {maxClipsPerProject})</p>
+                <div className="mt-2 flex items-center justify-center gap-4">
+                  <button
+                    type="button"
+                    className="flex size-9 items-center justify-center rounded-lg border"
+                    aria-label="Diminuir quantidade"
+                    onClick={() => setClipCount((value) => Math.max(1, value - 1))}
+                  >
+                    <Minus className="size-4" />
+                  </button>
+                  <span className="w-8 text-center text-[18px] font-semibold">{clipCount}</span>
+                  <button
+                    type="button"
+                    className="flex size-9 items-center justify-center rounded-lg border"
+                    aria-label="Aumentar quantidade"
+                    onClick={() => setClipCount((value) => Math.min(maxClipsPerProject, value + 1))}
+                  >
+                    <Plus className="size-4" />
+                  </button>
+                </div>
+                <input type="hidden" name="clipCount" value={clipCount} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="languageSimple">Idioma</Label>
-                <select id="languageSimple" name="language" className="h-8 w-full rounded-md border bg-transparent px-2 text-[13px]" defaultValue="auto">
+                <label htmlFor="languageSimple" className="text-[13px] font-medium">
+                  Idioma
+                </label>
+                <select id="languageSimple" name="language" className="h-10 w-full rounded-md border bg-transparent px-2 text-[13px]" defaultValue="auto">
                   <option value="auto">Detectar automaticamente</option>
                   <option value="pt-BR">Português (Brasil)</option>
                   <option value="en">English</option>
                   <option value="es">Español</option>
                 </select>
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Duração aproximada</Label>
-                <div className="grid grid-cols-3 gap-2 text-[13px]">
+              <div>
+                <p className="text-[13px] font-medium">Duração</p>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-[13px]">
                   {[
                     ["15-30", "Curto", "15–30s"],
                     ["30-60", "Médio", "30–60s"],
                     ["60-90", "Longo", "60–90s"],
                   ].map(([value, label, hint]) => (
-                    <label key={value} className="flex flex-col rounded-lg border px-2 py-1.5">
-                      <span className="flex items-center gap-2">
-                        <input type="radio" name="clipDuration" value={value} defaultChecked={value === "15-30"} />
-                        {label}
-                      </span>
-                      <span className="pl-5 text-[11px] text-muted-foreground">{hint}</span>
-                    </label>
+                    <button
+                      key={value}
+                      type="button"
+                      className={cn(
+                        "rounded-xl border px-2 py-2 text-left",
+                        duration === value && "border-primary/70 bg-primary/15",
+                      )}
+                      aria-pressed={duration === value}
+                      onClick={() => setDuration(value)}
+                    >
+                      <span className="block font-medium">{label}</span>
+                      <span className="text-[11px] text-muted-foreground">{hint}</span>
+                    </button>
                   ))}
                 </div>
+                <input type="hidden" name="clipDuration" value={duration} />
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Formato</Label>
-                <div className="grid grid-cols-3 gap-2 text-[13px]">
+              <div>
+                <p className="text-[13px] font-medium">Formato</p>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-[13px]">
                   {[
-                    ["9:16", "Vertical"],
-                    ["1:1", "Quadrado"],
-                    ["16:9", "Horizontal"],
+                    ["9:16", "Vertical 9:16"],
+                    ["1:1", "Quadrado 1:1"],
+                    ["16:9", "Horizontal 16:9"],
                   ].map(([value, label]) => (
-                    <label key={value} className="flex items-center gap-2 rounded-lg border px-2 py-1.5">
-                      <input type="radio" name="outputAspect" value={value} defaultChecked={value === "9:16"} />
-                      {label} {value}
-                    </label>
+                    <button
+                      key={value}
+                      type="button"
+                      className={cn(
+                        "rounded-xl border px-2 py-2",
+                        aspect === value && "border-primary/70 bg-primary/15",
+                      )}
+                      aria-pressed={aspect === value}
+                      onClick={() => setAspect(value)}
+                    >
+                      {label}
+                    </button>
                   ))}
                 </div>
+                <input type="hidden" name="outputAspect" value={aspect} />
               </div>
-              <label className="flex items-center gap-2 text-[13px] sm:col-span-2">
+              <label className="flex items-center gap-2 text-[13px]">
                 <input type="checkbox" name="autoCaptions" defaultChecked className="size-3.5 accent-primary" />
                 Legendas automáticas
+                <span className="rounded border px-1 text-[10px] font-semibold">CC</span>
               </label>
             </div>
             <input type="hidden" name="mode" value="AUTOMATIC" />
@@ -458,12 +549,12 @@ export function CreateProjectForm({
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="name">Nome do projeto</Label>
+              <label htmlFor="name" className="text-[13px] font-medium">Nome do projeto</label>
               <Input id="name" name="name" placeholder="Opcional — usamos o nome do arquivo" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="language">Idioma</Label>
-              <select id="language" name="language" className="h-8 w-full rounded-md border bg-transparent px-2 text-[13px]" defaultValue="auto">
+              <label htmlFor="language" className="text-[13px] font-medium">Idioma</label>
+              <select id="language" name="language" className="h-10 w-full rounded-md border bg-transparent px-2 text-[13px]" defaultValue="auto">
                 <option value="auto">Detectar automaticamente</option>
                 <option value="pt-BR">Português (Brasil)</option>
                 <option value="en">English</option>
@@ -471,11 +562,11 @@ export function CreateProjectForm({
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="clipCount">Quantidade de clips (máx. {maxClipsPerProject})</Label>
+              <label htmlFor="clipCount" className="text-[13px] font-medium">Quantidade de clips (máx. {maxClipsPerProject})</label>
               <Input id="clipCount" name="clipCount" type="number" defaultValue={maxClipsPerProject} min={1} max={maxClipsPerProject} />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label>Duração desejada</Label>
+              <p className="text-[13px] font-medium">Duração desejada</p>
               <div className="grid grid-cols-2 gap-2 text-[13px] sm:grid-cols-4">
                 {["15-30", "30-60", "60-90", "90+"].map((value) => (
                   <label key={value} className="flex items-center gap-2 rounded-lg border px-2 py-1.5">
@@ -486,7 +577,7 @@ export function CreateProjectForm({
               </div>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label>Formato</Label>
+              <p className="text-[13px] font-medium">Formato</p>
               <div className="grid grid-cols-3 gap-2 text-[13px]">
                 {["9:16", "1:1", "16:9"].map((value) => (
                   <label key={value} className="flex items-center gap-2 rounded-lg border px-2 py-1.5">
@@ -497,8 +588,8 @@ export function CreateProjectForm({
               </div>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="mode">Estilo</Label>
-              <select id="mode" name="mode" className="h-8 w-full rounded-md border bg-transparent px-2 text-[13px]" defaultValue="AUTOMATIC">
+              <label htmlFor="mode" className="text-[13px] font-medium">Estilo</label>
+              <select id="mode" name="mode" className="h-10 w-full rounded-md border bg-transparent px-2 text-[13px]" defaultValue="AUTOMATIC">
                 {MODES.map((mode) => (
                   <option key={mode.value} value={mode.value}>
                     {mode.label}
@@ -536,9 +627,20 @@ export function CreateProjectForm({
           {error} {phase === "error" ? "Você pode tentar novamente com o mesmo arquivo." : ""}
         </p>
       ) : null}
-      <Button type="submit" className="h-10 w-full text-[14px]" disabled={busy}>
-        {phase === "error" ? "Tentar novamente" : statusLabel && busy ? statusLabel : "Gerar clips"}
-      </Button>
+      <button
+        type="submit"
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg gradient-brand text-[14px] font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+        disabled={busy}
+      >
+        {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+        {phase === "error"
+          ? "Tentar novamente"
+          : phase === "preparing" || phase === "uploading"
+            ? "Preparando seu vídeo..."
+            : statusLabel && busy
+              ? statusLabel
+              : "Gerar clips"}
+      </button>
       {phase === "uploading" || phase === "preparing" ? (
         <button type="button" className="w-full text-[12px] text-muted-foreground underline-offset-2 hover:underline" onClick={() => void cancelUpload()}>
           Cancelar envio

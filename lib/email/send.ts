@@ -163,3 +163,19 @@ export async function sendPaymentFailedEmail(params: {
     idempotencyKey: `pay-fail:${params.invoiceId}`,
   });
 }
+
+export async function sendReferralRewardEmail(params: {
+  to: string;
+  userId: string;
+  name?: string | null;
+  rewardId: string;
+}) {
+  return sendTemplatedEmail({
+    to: params.to,
+    template: "referral-reward",
+    userId: params.userId,
+    vars: { name: params.name ?? undefined, actionUrl: undefined },
+    idempotencyKey: `referral-reward:${params.rewardId}`,
+    flush: false,
+  });
+}

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { maybeGrantReferralReward } from "@/lib/referral/reward";
 
 const createEvent = vi.fn();
 const findFirst = vi.fn();
@@ -52,6 +53,10 @@ vi.mock("@/lib/email/billing", () => ({
   notifyPaymentFailed: vi.fn(async () => undefined),
 }));
 
+vi.mock("@/lib/referral/reward", () => ({
+  maybeGrantReferralReward: vi.fn(async () => ({ ok: false, reason: "no-attribution" })),
+}));
+
 function setTestStripeEnv() {
   process.env.STRIPE_SECRET_KEY = "sk_test_cliplab";
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = "pk_test_cliplab";
@@ -70,6 +75,8 @@ describe("stripe webhook", () => {
     findOwner.mockReset();
     constructEvent.mockReset();
     retrieveSubscription.mockReset();
+    vi.mocked(maybeGrantReferralReward).mockClear();
+    vi.mocked(maybeGrantReferralReward).mockResolvedValue({ ok: false, reason: "no-attribution" });
   });
 
   it("rejects invalid signatures", async () => {
@@ -303,5 +310,46 @@ describe("stripe webhook", () => {
     const result = await handleStripeWebhook({ rawBody: "{}", signature: "sig", ip: "10.0.0.9" });
     expect(result.ok).toBe(true);
     expect(upsertSub).not.toHaveBeenCalled();
+  });
+
+  it("asks the referral rewarder after a paid invoice without trusting the client", async () => {
+    setTestStripeEnv();
+    constructEvent.mockReturnValue({
+      id: "evt_paid_ref",
+      type: "invoice.paid",
+      data: {
+        object: {
+          id: "in_paid",
+          customer: "cus_a",
+          amount_paid: 5990,
+          amount_due: 5990,
+          currency: "brl",
+          hosted_invoice_url: null,
+          metadata: {},
+          parent: { subscription_details: { subscription: "sub_ok" } },
+        },
+      },
+    });
+    createEvent.mockResolvedValue({});
+    findFirst.mockResolvedValue({
+      id: "subrow",
+      workspaceId: "ws_referred",
+      plan: { code: "CREATOR" },
+      stripeCustomerId: "cus_a",
+      status: "ACTIVE",
+    });
+    upsertInvoice.mockResolvedValue({});
+    updateSub.mockResolvedValue({});
+    const { handleStripeWebhook } = await import("@/lib/billing/webhook");
+    const result = await handleStripeWebhook({ rawBody: "{}", signature: "sig", ip: "10.0.0.10" });
+    expect(result.ok).toBe(true);
+    expect(maybeGrantReferralReward).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referredWorkspaceId: "ws_referred",
+        paidAmount: 5990,
+        stripeEventId: "evt_paid_ref",
+        stripeInvoiceId: "in_paid",
+      }),
+    );
   });
 });

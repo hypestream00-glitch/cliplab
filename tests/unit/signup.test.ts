@@ -19,6 +19,16 @@ const sendVerify = vi.fn(async (_params: unknown) => ({
   outboxId: "ob_1",
 }));
 const ensurePlans = vi.fn(async () => undefined);
+type AttributeResult =
+  | { ok: true; attributionId: string; referrerUserId: string }
+  | { ok: false; reason: "missing" | "invalid" | "self" | "duplicate" };
+
+const attributeReferral = vi.fn(
+  async (_params: { referredUserId: string; code: string | null | undefined }): Promise<AttributeResult> => ({
+    ok: false,
+    reason: "missing",
+  }),
+);
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
@@ -47,6 +57,18 @@ vi.mock("@/lib/email/send", () => ({
 
 vi.mock("@/lib/billing/ensure-plans", () => ({
   ensureProductPlans: () => ensurePlans(),
+}));
+
+vi.mock("@/lib/promo/ensure", () => ({
+  ensurePromoCodes: async () => undefined,
+}));
+
+vi.mock("@/lib/referral/profile", () => ({
+  ensureReferralProfile: async () => ({ code: "ABC123XY" }),
+}));
+
+vi.mock("@/lib/referral/attribute", () => ({
+  attributeReferral: (params: { referredUserId: string; code: string | null | undefined }) => attributeReferral(params),
 }));
 
 vi.mock("@/lib/social/upload-post/profiles", () => ({
@@ -89,6 +111,8 @@ describe("completeSignup", () => {
       outboxId: "ob_1",
     });
     ensurePlans.mockReset();
+    attributeReferral.mockReset();
+    attributeReferral.mockResolvedValue({ ok: false, reason: "missing" });
     delete process.env.UPLOAD_POST_API_KEY;
     delete process.env.SOCIAL_PROVIDER;
   });
@@ -163,6 +187,24 @@ describe("completeSignup", () => {
     expect(result.ok).toBe(true);
     expect(sendVerify).toHaveBeenCalled();
     expect(Date.now() - started).toBeLessThan(500);
+  });
+
+  it("keeps referral attribution from signup input", async () => {
+    findUnique.mockResolvedValue(null);
+    userCreate.mockResolvedValue({ id: "user_1", name: "Pablo", email: "pablo@example.com" });
+    workspaceCreate.mockResolvedValue({ id: "ws_1" });
+    planFindUnique.mockResolvedValue({ id: "plan_free", code: "FREE" });
+    subscriptionCreate.mockResolvedValue({ id: "sub_1" });
+    attributeReferral.mockResolvedValue({ ok: true as const, attributionId: "attr_1", referrerUserId: "referrer" });
+    const { completeSignup } = await import("@/lib/auth/register");
+    const result = await completeSignup({
+      name: "Pablo",
+      email: "pablo@example.com",
+      password: "secret123",
+      referralCode: "ABC123XY",
+    });
+    expect(result.ok).toBe(true);
+    expect(attributeReferral).toHaveBeenCalledWith({ referredUserId: "user_1", code: "ABC123XY" });
   });
 });
 

@@ -6,6 +6,8 @@ import {
   secondsFromDurationMs,
 } from "@/lib/billing/usage-math";
 import { effectivePlanCode } from "@/lib/billing/stripe-status";
+import { listActiveGrants } from "@/lib/billing/grants";
+import { mergePlanWithGrants, pickActiveGrant, remainingGrantDays } from "@/lib/billing/plan-rank";
 
 export { PlanLimitError, secondsFromDurationMs, minutesFromSeconds, formatMinutesUsed, processingIdempotencyKey } from "@/lib/billing/usage-math";
 
@@ -15,27 +17,15 @@ function periodStart(subscriptionStart?: Date | null) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
-export async function getWorkspacePlanCode(workspaceId: string) {
-  const subscription = await prisma.subscription.findUnique({
-    where: { workspaceId },
-    include: { plan: true },
-  });
-  if (!subscription) return "FREE";
-  return effectivePlanCode({
-    planCode: subscription.plan.code,
-    status: subscription.status,
-    currentPeriodEnd: subscription.currentPeriodEnd,
-    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-    gracePeriodEndsAt: subscription.gracePeriodEndsAt,
-  });
-}
-
-export async function getMonthlyUsage(workspaceId: string) {
-  const subscription = await prisma.subscription.findUnique({
-    where: { workspaceId },
-    include: { plan: true },
-  });
-  const planCode = subscription
+async function resolveWorkspacePlan(workspaceId: string, now = new Date()) {
+  const [subscription, grants] = await Promise.all([
+    prisma.subscription.findUnique({
+      where: { workspaceId },
+      include: { plan: true },
+    }),
+    listActiveGrants(workspaceId, now),
+  ]);
+  const stripePlan = subscription
     ? effectivePlanCode({
         planCode: subscription.plan.code,
         status: subscription.status,
@@ -44,6 +34,20 @@ export async function getMonthlyUsage(workspaceId: string) {
         gracePeriodEndsAt: subscription.gracePeriodEndsAt,
       })
     : "FREE";
+  const planCode = mergePlanWithGrants(stripePlan, grants, now);
+  const activeGrant = pickActiveGrant(grants, now);
+  return { subscription, grants, stripePlan, planCode, activeGrant };
+}
+
+export async function getWorkspacePlanCode(workspaceId: string) {
+  const resolved = await resolveWorkspacePlan(workspaceId);
+  return resolved.planCode;
+}
+
+export async function getMonthlyUsage(workspaceId: string) {
+  const now = new Date();
+  const resolved = await resolveWorkspacePlan(workspaceId, now);
+  const { subscription, planCode, stripePlan, activeGrant } = resolved;
   const limits = getPlanLimits(planCode);
   const start = periodStart(subscription?.currentPeriodStart ?? null);
   const used = await prisma.usageEvent.aggregate({
@@ -58,11 +62,20 @@ export async function getMonthlyUsage(workspaceId: string) {
     remainingSeconds: Math.max(0, limitSeconds - usedSeconds),
     limits,
     periodStart: start,
-    periodEnd: subscription?.currentPeriodEnd ?? null,
+    periodEnd: subscription?.currentPeriodEnd ?? activeGrant?.endsAt ?? null,
     status: subscription?.status ?? "ACTIVE",
     storedPlanCode: subscription?.plan.code ?? "FREE",
+    stripePlanCode: stripePlan,
     effectivePlanCode: planCode,
     cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
+    activeGrant: activeGrant
+      ? {
+          planCode: activeGrant.planCode,
+          source: activeGrant.source,
+          endsAt: activeGrant.endsAt,
+          daysLeft: remainingGrantDays(activeGrant.endsAt, now),
+        }
+      : null,
   };
 }
 

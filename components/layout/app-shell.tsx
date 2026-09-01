@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import type { NotificationItem } from "@/components/layout/notification-center";
+import type { ReferralModalProps } from "@/components/layout/referral-button";
 import type { Workspace, WorkspaceMember } from "@/generated/prisma/client";
 import { useState } from "react";
 
@@ -36,6 +37,9 @@ type ShellProps = {
   planName: string;
   workspaceName: string;
   usageLabel: string;
+  usagePercent?: number;
+  grantLabel?: string | null;
+  referral?: ReferralModalProps | null;
   notifications: NotificationItem[];
   children: React.ReactNode;
 };
@@ -48,6 +52,9 @@ export function AppShell({
   planName,
   workspaceName,
   usageLabel,
+  usagePercent,
+  grantLabel,
+  referral,
   notifications,
   children,
 }: ShellProps) {
@@ -73,6 +80,8 @@ export function AppShell({
         planName={planName}
         workspaceName={workspaceName}
         usageLabel={usageLabel}
+        usagePercent={usagePercent}
+        grantLabel={grantLabel}
         user={user}
       />
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -87,6 +96,8 @@ export function AppShell({
               planName={planName}
               workspaceName={workspaceName}
               usageLabel={usageLabel}
+              usagePercent={usagePercent}
+              grantLabel={grantLabel}
               user={user}
               onNavigate={() => setMobileOpen(false)}
             />
@@ -97,6 +108,7 @@ export function AppShell({
         <Topbar
           user={user}
           notifications={notifications}
+          referral={referral}
           onToggleCollapsed={toggleCollapsed}
           onOpenMobile={() => setMobileOpen(true)}
         />

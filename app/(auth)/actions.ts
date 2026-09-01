@@ -17,6 +17,7 @@ import { isNextRedirectError, safeErrorType, withTimeout } from "@/lib/async/tim
 import { after } from "next/server";
 import { flushEmail, processEmailOutbox } from "@/lib/email/outbox";
 import { isEmailConfigured } from "@/lib/email/config";
+import { getReferralCookie } from "@/lib/referral/cookie";
 
 const RESEND_COOLDOWN_MS = 60_000;
 
@@ -47,6 +48,7 @@ export async function registerAction(_prev: unknown, formData: FormData) {
       name: parsed.data.name,
       email: parsed.data.email,
       password: parsed.data.password,
+      referralCode: String(formData.get("ref") ?? "") || (await getReferralCookie()),
     });
     if (!result.ok) return { error: result.error };
 
