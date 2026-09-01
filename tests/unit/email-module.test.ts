@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { escapeHtml, maskEmail } from "@/lib/email/escape";
 import { appOrigin, appPathUrl, isSafeAppPath } from "@/lib/email/app-url";
-import { emailMissingVars, emailProviderStatus, isEmailConfigured } from "@/lib/email/config";
+import { emailMissingVars, emailProviderStatus, isEmailConfigured, logSmtpEnvPresence, smtpSafeEnvCheck } from "@/lib/email/config";
+import { canConfirmVerificationResend } from "@/lib/email/send";
+import { smtpFailureCode } from "@/lib/email/smtp-provider";
+import { LOG_REDACT_PATHS, logger } from "@/lib/logger";
 import { renderEmailTemplate } from "@/lib/email/templates";
 import { hashToken } from "@/lib/security/crypto";
 
@@ -13,14 +16,56 @@ const findUnique = vi.fn();
 const findMany = vi.fn();
 const count = vi.fn();
 
-const sendMock = vi.fn(async () => ({ ok: false as const, error: "SMTP_SEND_FAILED" }));
-
-vi.mock("@/lib/email/smtp-provider", () => ({
-  getEmailProvider: () => ({
-    name: "smtp",
-    send: () => sendMock(),
-  }),
+const sendMock = vi.fn(async (): Promise<{ ok: true } | { ok: false; error: string }> => ({
+  ok: false,
+  error: "SMTP_SEND_FAILED",
 }));
+
+const SMTP_KEYS = [
+  "SMTP_HOST",
+  "SMTP_PORT",
+  "SMTP_SECURE",
+  "SMTP_USER",
+  "SMTP_PASSWORD",
+  "SMTP_PASS",
+  "SMTP_FROM",
+  "EMAIL_FROM",
+] as const;
+
+function snapshotSmtpEnv() {
+  return Object.fromEntries(SMTP_KEYS.map((key) => [key, process.env[key]]));
+}
+
+function restoreSmtpEnv(prev: Record<string, string | undefined>) {
+  for (const key of SMTP_KEYS) {
+    if (prev[key]) process.env[key] = prev[key];
+    else delete process.env[key];
+  }
+}
+
+function clearSmtpEnv() {
+  for (const key of SMTP_KEYS) delete process.env[key];
+}
+
+function setSmtpConfigured() {
+  process.env.SMTP_HOST = "smtp.gmail.com";
+  process.env.SMTP_PORT = "587";
+  process.env.SMTP_SECURE = "false";
+  process.env.SMTP_USER = "from@example.com";
+  process.env.SMTP_PASSWORD = "app-password-not-logged";
+  process.env.SMTP_FROM = "from@example.com";
+}
+
+vi.mock("@/lib/email/smtp-provider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/email/smtp-provider")>();
+  return {
+    ...actual,
+    getEmailProvider: () => ({
+      name: "smtp",
+      send: () => sendMock(),
+    }),
+  };
+});
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
@@ -56,16 +101,12 @@ describe("email security helpers", () => {
   });
 
   it("does not mark SMTP as configured without required vars", () => {
-    const keys = ["SMTP_HOST", "SMTP_FROM", "SMTP_USER", "SMTP_PASSWORD"];
-    const prev = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
-    for (const key of keys) delete process.env[key];
+    const prev = snapshotSmtpEnv();
+    clearSmtpEnv();
     expect(isEmailConfigured()).toBe(false);
     expect(emailProviderStatus()).toBe("EMAIL_PROVIDER_NOT_CONFIGURED");
-    expect(emailMissingVars()).toEqual(keys);
-    for (const key of keys) {
-      if (prev[key]) process.env[key] = prev[key];
-      else delete process.env[key];
-    }
+    expect(emailMissingVars()).toEqual(["SMTP_HOST", "SMTP_FROM", "SMTP_USER", "SMTP_PASSWORD"]);
+    restoreSmtpEnv(prev);
   });
 
   it("does not leak SMTP secrets into NEXT_PUBLIC", () => {
@@ -75,18 +116,68 @@ describe("email security helpers", () => {
   });
 
   it("rejects known SMTP password placeholders", () => {
-    const keys = ["SMTP_HOST", "SMTP_FROM", "SMTP_USER", "SMTP_PASSWORD"] as const;
-    const prev = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+    const prev = snapshotSmtpEnv();
     process.env.SMTP_HOST = "smtp.gmail.com";
     process.env.SMTP_FROM = "a@b.com";
     process.env.SMTP_USER = "a@b.com";
     process.env.SMTP_PASSWORD = "COLE_AQUI_A_SENHA_DE_APP_DE_16_CARACTERES";
+    delete process.env.SMTP_PASS;
     expect(isEmailConfigured()).toBe(false);
     expect(emailMissingVars()).toContain("SMTP_PASSWORD");
-    for (const key of keys) {
-      if (prev[key]) process.env[key] = prev[key];
-      else delete process.env[key];
-    }
+    restoreSmtpEnv(prev);
+  });
+
+  it("accepts SMTP_PASS and EMAIL_FROM aliases", () => {
+    const prev = snapshotSmtpEnv();
+    clearSmtpEnv();
+    process.env.SMTP_HOST = "smtp.gmail.com";
+    process.env.SMTP_USER = "a@b.com";
+    process.env.SMTP_PASS = "abcdefghijklmnop";
+    process.env.EMAIL_FROM = "a@b.com";
+    expect(isEmailConfigured()).toBe(true);
+    expect(smtpSafeEnvCheck()).toEqual({
+      SMTP_HOST: true,
+      SMTP_PORT: false,
+      SMTP_USER: true,
+      SMTP_PASS: true,
+      SMTP_FROM: true,
+    });
+    restoreSmtpEnv(prev);
+  });
+
+  it("reports SMTP presence only and never secret values", () => {
+    const prev = snapshotSmtpEnv();
+    const secret = "super-secret-app-password-xyz";
+    process.env.SMTP_HOST = "smtp.gmail.com";
+    process.env.SMTP_PORT = "587";
+    process.env.SMTP_USER = "from@example.com";
+    process.env.SMTP_PASSWORD = secret;
+    process.env.SMTP_FROM = "from@example.com";
+    const lines: string[] = [];
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+      lines.push(String(chunk).replace(/\n$/, ""));
+      return true;
+    });
+    logSmtpEnvPresence();
+    spy.mockRestore();
+    expect(lines).toEqual([
+      "SMTP_HOST PRESENT: true",
+      "SMTP_PORT PRESENT: true",
+      "SMTP_USER PRESENT: true",
+      "SMTP_PASS PRESENT: true",
+      "SMTP_FROM/EMAIL_FROM PRESENT: true",
+    ]);
+    expect(lines.join("\n")).not.toContain(secret);
+    expect(JSON.stringify(smtpSafeEnvCheck())).not.toContain(secret);
+    expect(LOG_REDACT_PATHS).toContain("SMTP_PASS");
+    expect(LOG_REDACT_PATHS).toContain("SMTP_PASSWORD");
+    restoreSmtpEnv(prev);
+  });
+
+  it("maps SMTP failures to safe codes", () => {
+    expect(smtpFailureCode({ code: "EAUTH" })).toBe("SMTP_AUTH_FAILED");
+    expect(smtpFailureCode({ code: "ECONNECTION" })).toBe("SMTP_CONNECTION_FAILED");
+    expect(smtpFailureCode(Object.assign(new Error("connection timeout"), { code: "ETIMEDOUT" }))).toBe("SMTP_TIMEOUT");
   });
 });
 
@@ -139,26 +230,20 @@ describe("email outbox", () => {
     findUnique.mockReset();
     findMany.mockReset();
     update.mockReset();
+    count.mockReset();
     sendMock.mockReset();
     sendMock.mockResolvedValue({ ok: false, error: "SMTP_SEND_FAILED" });
   });
 
   it("is idempotent on duplicate keys and keeps mail when SMTP is missing", async () => {
-    const prev = {
-      SMTP_HOST: process.env.SMTP_HOST,
-      SMTP_FROM: process.env.SMTP_FROM,
-      SMTP_USER: process.env.SMTP_USER,
-      SMTP_PASSWORD: process.env.SMTP_PASSWORD,
-    };
-    delete process.env.SMTP_HOST;
-    delete process.env.SMTP_FROM;
-    delete process.env.SMTP_USER;
-    delete process.env.SMTP_PASSWORD;
+    const prev = snapshotSmtpEnv();
+    clearSmtpEnv();
     create.mockResolvedValueOnce({ id: "mail_1", type: "welcome", recipient: "a@b.com", status: "PENDING", attempts: 0, payload: {} });
     findUnique
       .mockResolvedValueOnce(null)
       .mockResolvedValue({ id: "mail_1", type: "welcome", recipient: "a@b.com", status: "PENDING", attempts: 0, payload: {} });
     update.mockResolvedValue({});
+    count.mockResolvedValue(1);
     const { enqueueEmail, processEmailOutbox } = await import("@/lib/email/outbox");
     const first = await enqueueEmail({
       type: "welcome",
@@ -177,10 +262,7 @@ describe("email outbox", () => {
     expect(dup.duplicate).toBe(true);
     const flush = await processEmailOutbox();
     expect(flush.reason).toBe("EMAIL: CONFIGURATION REQUIRED");
-    for (const [key, value] of Object.entries(prev)) {
-      if (value) process.env[key] = value;
-      else delete process.env[key];
-    }
+    restoreSmtpEnv(prev);
   });
 
   it("does not wait on SMTP when flush is false", async () => {
@@ -205,6 +287,144 @@ describe("email outbox", () => {
     expect(result.queued).toBe(true);
     expect(result.sent).toBe(false);
     expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("stores the production verify URL and never localhost", async () => {
+    const prevApp = process.env.APP_URL;
+    const prevAuth = process.env.AUTH_URL;
+    process.env.APP_URL = "https://cliplab-production-6972.up.railway.app";
+    process.env.AUTH_URL = "https://cliplab-production-6972.up.railway.app";
+    findUnique.mockResolvedValueOnce(null).mockResolvedValue({ id: "mail_url", status: "PENDING" });
+    create.mockResolvedValueOnce({
+      id: "mail_url",
+      type: "verify-email",
+      recipient: "a@b.com",
+      status: "PENDING",
+      attempts: 0,
+      payload: {},
+    });
+    const { enqueueEmail } = await import("@/lib/email/outbox");
+    await enqueueEmail({
+      type: "verify-email",
+      to: "a@b.com",
+      userId: "user_url",
+      idempotencyKey: "verify:user_url:prod",
+      rawToken: "verify-token",
+      flush: false,
+    });
+    const payload = create.mock.calls[0][0].data.payload as { actionUrl?: string };
+    expect(payload.actionUrl).toBe(
+      "https://cliplab-production-6972.up.railway.app/verify-email?token=verify-token",
+    );
+    expect(payload.actionUrl).not.toContain("localhost");
+    if (prevApp) process.env.APP_URL = prevApp;
+    else delete process.env.APP_URL;
+    if (prevAuth) process.env.AUTH_URL = prevAuth;
+    else delete process.env.AUTH_URL;
+  });
+
+  it("worker processEmailOutbox sends pending mail and marks SENT", async () => {
+    const prev = snapshotSmtpEnv();
+    setSmtpConfigured();
+    sendMock.mockResolvedValueOnce({ ok: true });
+    findMany.mockResolvedValueOnce([{ id: "mail_ok" }]);
+    findUnique.mockResolvedValue({
+      id: "mail_ok",
+      type: "verify-email",
+      recipient: "a@b.com",
+      status: "PENDING",
+      attempts: 0,
+      payload: { actionUrl: "https://cliplab-production-6972.up.railway.app/verify-email?token=abc" },
+    });
+    update.mockResolvedValue({});
+    const { processEmailOutbox } = await import("@/lib/email/outbox");
+    const result = await processEmailOutbox();
+    expect(result.processed).toBe(1);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const statuses = update.mock.calls.map((call) => (call[0] as { data?: { status?: string } }).data?.status);
+    expect(statuses).toContain("SENDING");
+    expect(statuses).toContain("SENT");
+    restoreSmtpEnv(prev);
+  });
+
+  it("keeps SMTP failures pending then FAILED after 8 attempts", async () => {
+    const prev = snapshotSmtpEnv();
+    setSmtpConfigured();
+    sendMock.mockResolvedValue({ ok: false, error: "SMTP_TIMEOUT" });
+    findUnique.mockResolvedValue({
+      id: "mail_retry",
+      type: "verify-email",
+      recipient: "a@b.com",
+      status: "PENDING",
+      attempts: 7,
+      payload: {},
+    });
+    update.mockResolvedValue({});
+    const { flushEmail } = await import("@/lib/email/outbox");
+    const result = await flushEmail("mail_retry");
+    expect(result.sent).toBe(false);
+    const statuses = update.mock.calls.map((call) => (call[0] as { data?: { status?: string } }).data?.status);
+    expect(statuses).toContain("FAILED");
+    expect(statuses).not.toContain("SENT");
+    restoreSmtpEnv(prev);
+  });
+
+  it("queues verification email without calling SMTP", async () => {
+    const prev = snapshotSmtpEnv();
+    setSmtpConfigured();
+    findUnique.mockResolvedValueOnce(null).mockResolvedValue({ id: "v1", status: "PENDING" });
+    create.mockResolvedValue({
+      id: "v1",
+      type: "verify-email",
+      recipient: "a@b.com",
+      status: "PENDING",
+      attempts: 0,
+      payload: {},
+    });
+    const { sendVerificationEmail } = await import("@/lib/email/send");
+    const result = await sendVerificationEmail({ to: "a@b.com", userId: "u1", rawToken: "raw-verify-token" });
+    expect(result.queued).toBe(true);
+    expect(result.ok).toBe(true);
+    expect(sendMock).not.toHaveBeenCalled();
+    restoreSmtpEnv(prev);
+  });
+
+  it("does not confirm resend when enqueue fails or SMTP is missing", async () => {
+    create.mockRejectedValue(new Error("db down"));
+    findUnique.mockResolvedValue(null);
+    const { sendVerificationEmail } = await import("@/lib/email/send");
+    const sent = await sendVerificationEmail({ to: "a@b.com", userId: "u1", rawToken: "raw-verify-token" });
+    expect(sent).toMatchObject({ ok: false, reason: "ENQUEUE_FAILED", queued: false, outboxId: null });
+    expect(canConfirmVerificationResend(sent, true)).toBe(false);
+    expect(canConfirmVerificationResend({ queued: true }, false)).toBe(false);
+    expect(canConfirmVerificationResend({ queued: true }, true)).toBe(true);
+    expect(canConfirmVerificationResend({ queued: false, duplicate: true }, true)).toBe(true);
+  });
+
+  it("does not log SMTP secrets or verification tokens", async () => {
+    const prev = snapshotSmtpEnv();
+    const secret = "super-secret-app-password-xyz";
+    setSmtpConfigured();
+    process.env.SMTP_PASSWORD = secret;
+    const info = vi.spyOn(logger, "info").mockImplementation(() => logger);
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => logger);
+    findUnique.mockResolvedValueOnce(null).mockResolvedValue({ id: "vlog", status: "PENDING" });
+    create.mockResolvedValue({
+      id: "vlog",
+      type: "verify-email",
+      recipient: "a@b.com",
+      status: "PENDING",
+      attempts: 0,
+      payload: {},
+    });
+    const { sendVerificationEmail } = await import("@/lib/email/send");
+    await sendVerificationEmail({ to: "a@b.com", userId: "u1", rawToken: "raw-verify-token-secret" });
+    const dumped = JSON.stringify([...info.mock.calls, ...warn.mock.calls]);
+    expect(dumped).not.toContain(secret);
+    expect(dumped).not.toContain("raw-verify-token-secret");
+    info.mockRestore();
+    warn.mockRestore();
+    restoreSmtpEnv(prev);
   });
 });
 
@@ -239,12 +459,8 @@ describe("workspace isolation in billing mail keys", () => {
   });
 
   it("does not mark SENT unless the provider accepted delivery", async () => {
-    const keys = ["SMTP_HOST", "SMTP_FROM", "SMTP_USER", "SMTP_PASSWORD"] as const;
-    const prev = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
-    process.env.SMTP_HOST = "smtp.gmail.com";
-    process.env.SMTP_FROM = "from@example.com";
-    process.env.SMTP_USER = "from@example.com";
-    process.env.SMTP_PASSWORD = "app-password-not-logged";
+    const prev = snapshotSmtpEnv();
+    setSmtpConfigured();
     sendMock.mockResolvedValueOnce({ ok: false, error: "SMTP_NOT_ACCEPTED" });
     create.mockResolvedValue({ id: "mail_fail", type: "welcome", recipient: "a@b.com", status: "PENDING", attempts: 0, payload: {} });
     findUnique
@@ -263,9 +479,6 @@ describe("workspace isolation in billing mail keys", () => {
     const statuses = update.mock.calls.map((call) => (call[0] as { data?: { status?: string } }).data?.status);
     expect(statuses).toContain("SENDING");
     expect(statuses).not.toContain("SENT");
-    for (const key of keys) {
-      if (prev[key]) process.env[key] = prev[key];
-      else delete process.env[key];
-    }
+    restoreSmtpEnv(prev);
   });
 });

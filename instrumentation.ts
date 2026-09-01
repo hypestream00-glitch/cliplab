@@ -15,4 +15,6 @@ export async function register() {
     const optional = parsed.issues.filter((issue) => !issue.essential).map((issue) => issue.key);
     if (optional.length) logger.warn({ keys: optional }, "optional env invalid or empty after parse");
   }
+  const { logSmtpEnvPresence } = await import("./lib/email/config");
+  logSmtpEnvPresence();
 }

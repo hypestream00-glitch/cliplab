@@ -33,7 +33,9 @@ export function startClipLabWorkers() {
   if (!scheduleTimer) {
     scheduleTimer = setInterval(() => {
       void beatWorker().catch(() => undefined);
-      void processEmailOutbox().catch(() => undefined);
+      void processEmailOutbox().catch((error) => {
+        logger.warn({ errType: error instanceof Error ? error.name : "Error" }, "EMAIL SMTP ERROR: Timeout");
+      });
       void enqueueDueScheduledPublications().catch(() => undefined);
       void recoverPersistedJobs().catch(() => undefined);
       void cleanupExpiredUploads().catch(() => undefined);

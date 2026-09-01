@@ -25,6 +25,7 @@ describe("Railway worker image", () => {
     expect(pkg.scripts.worker).toBe("node scripts/start-worker.mjs");
     expect(pkg.scripts["worker:dev"]).toBe("tsx workers/index.ts");
     expect(pkg.scripts["build:worker"]).toBe("node scripts/build-worker.mjs");
+    expect(pkg.scripts["worker:build"]).toBe("node scripts/build-worker.mjs");
     expect(startWorker).toContain("dist");
     expect(startWorker).toContain("worker.mjs");
     expect(startWorker).toContain("tsx");

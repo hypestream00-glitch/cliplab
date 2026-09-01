@@ -10,7 +10,14 @@ const planFindUnique = vi.fn();
 const subscriptionCreate = vi.fn();
 const hashMock = vi.fn(async (_password: string) => "$2a$12$hashed");
 const issueToken = vi.fn(async (_kind: string, _email: string) => "raw-verify-token");
-const sendVerify = vi.fn(async (_params: unknown) => ({ ok: true, id: "verify-email", delivered: false, duplicate: false }));
+const sendVerify = vi.fn(async (_params: unknown) => ({
+  ok: true,
+  id: "verify-email",
+  delivered: false,
+  duplicate: false,
+  queued: true,
+  outboxId: "ob_1",
+}));
 const ensurePlans = vi.fn(async () => undefined);
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -42,6 +49,10 @@ vi.mock("@/lib/billing/ensure-plans", () => ({
   ensureProductPlans: () => ensurePlans(),
 }));
 
+vi.mock("@/lib/social/upload-post/profiles", () => ({
+  ensureUploadPostProfile: () => new Promise(() => undefined),
+}));
+
 describe("signup timeouts", () => {
   it("rejects a hanging promise instead of waiting forever", async () => {
     const hanging = new Promise<string>(() => undefined);
@@ -69,9 +80,17 @@ describe("completeSignup", () => {
     issueToken.mockReset();
     issueToken.mockResolvedValue("raw-verify-token");
     sendVerify.mockReset();
-    sendVerify.mockResolvedValue({ ok: true, id: "verify-email", delivered: false, duplicate: false });
+    sendVerify.mockResolvedValue({
+      ok: true,
+      id: "verify-email",
+      delivered: false,
+      duplicate: false,
+      queued: true,
+      outboxId: "ob_1",
+    });
     ensurePlans.mockReset();
     delete process.env.UPLOAD_POST_API_KEY;
+    delete process.env.SOCIAL_PROVIDER;
   });
 
   it("creates a new user and workspace without sending SMTP on the critical path", async () => {
@@ -82,7 +101,13 @@ describe("completeSignup", () => {
     subscriptionCreate.mockResolvedValue({ id: "sub_1" });
     const { completeSignup } = await import("@/lib/auth/register");
     const result = await completeSignup({ name: "Pablo", email: "pablo@example.com", password: "secret123" });
-    expect(result).toEqual({ ok: true, userId: "user_1", workspaceId: "ws_1", email: "pablo@example.com" });
+    expect(result).toEqual({
+      ok: true,
+      userId: "user_1",
+      workspaceId: "ws_1",
+      email: "pablo@example.com",
+      outboxId: "ob_1",
+    });
     expect(hashMock).toHaveBeenCalledWith("secret123");
     expect(userCreate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -120,6 +145,22 @@ describe("completeSignup", () => {
     const { completeSignup } = await import("@/lib/auth/register");
     const result = await completeSignup({ name: "Pablo", email: "pablo@example.com", password: "secret123" });
     expect(result.ok).toBe(true);
+    if (result.ok) expect(result.outboxId).toBeNull();
+  });
+
+  it("does not wait on Upload-Post and still queues verification email", async () => {
+    findUnique.mockResolvedValue(null);
+    userCreate.mockResolvedValue({ id: "user_1", name: "Pablo", email: "pablo@example.com" });
+    workspaceCreate.mockResolvedValue({ id: "ws_1" });
+    planFindUnique.mockResolvedValue(null);
+    process.env.UPLOAD_POST_API_KEY = "up_test_key";
+    process.env.SOCIAL_PROVIDER = "upload-post";
+    const started = Date.now();
+    const { completeSignup } = await import("@/lib/auth/register");
+    const result = await completeSignup({ name: "Pablo", email: "pablo@example.com", password: "secret123" });
+    expect(result.ok).toBe(true);
+    expect(sendVerify).toHaveBeenCalled();
+    expect(Date.now() - started).toBeLessThan(500);
   });
 });
 

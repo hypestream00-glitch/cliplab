@@ -82,11 +82,13 @@ line("Stripe publishable", present("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY") || pres
 line("Stripe webhook", present("STRIPE_WEBHOOK_SECRET") ? true : "warn", present("STRIPE_WEBHOOK_SECRET") ? "set" : "CONFIGURATION REQUIRED");
 line("Creator price", present("STRIPE_PRICE_CREATOR") || present("STRIPE_PRICE_PLUS") || present("STRIPE_PRICE_BASIC") ? true : "warn", "set or missing");
 line("Pro price", present("STRIPE_PRICE_PRO") || present("STRIPE_PRICE_BUSINESS") ? true : "warn", "set or missing");
-const smtpPassword = (process.env.SMTP_PASSWORD ?? "").trim().replace(/\s+/g, "");
+const smtpPassword = (process.env.SMTP_PASSWORD ?? process.env.SMTP_PASS ?? "").trim().replace(/\s+/g, "");
+const smtpFromReady = present("SMTP_FROM") || present("EMAIL_FROM");
 const smtpPasswordPlaceholder = ["COLE_AQUI_A_SENHA_DE_APP_DE_16_CARACTERES", "changeme", "password", "your_password_here"].includes(smtpPassword);
-const smtpReady = present("SMTP_HOST") && present("SMTP_FROM") && present("SMTP_USER") && present("SMTP_PASSWORD") && !smtpPasswordPlaceholder;
+const smtpReady = present("SMTP_HOST") && smtpFromReady && present("SMTP_USER") && smtpPassword.length > 0 && !smtpPasswordPlaceholder;
 const smtpMissing = ["SMTP_HOST", "SMTP_FROM", "SMTP_USER", "SMTP_PASSWORD"].filter((key) => {
-  if (key === "SMTP_PASSWORD") return !present(key) || smtpPasswordPlaceholder;
+  if (key === "SMTP_PASSWORD") return smtpPassword.length === 0 || smtpPasswordPlaceholder;
+  if (key === "SMTP_FROM") return !smtpFromReady;
   return !present(key);
 });
 line("SMTP", smtpReady ? true : "warn", smtpReady ? "CONFIGURED" : `CONFIGURATION REQUIRED${smtpMissing.length ? " — " + smtpMissing.join(", ") : ""}`);

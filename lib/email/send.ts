@@ -3,8 +3,8 @@ import { isEmailConfigured } from "@/lib/email/config";
 import { emailTemplate, type EmailTemplateId, type EmailTemplateVars } from "@/lib/email/templates";
 
 export type SendEmailResult =
-  | { ok: true; id: EmailTemplateId; delivered: boolean; duplicate: boolean }
-  | { ok: false; reason: "EMAIL: CONFIGURATION REQUIRED" | "SMTP_SEND_FAILED"; id: EmailTemplateId; queued: boolean };
+  | { ok: true; id: EmailTemplateId; delivered: boolean; duplicate: boolean; queued: boolean; outboxId: string | null }
+  | { ok: false; reason: "EMAIL: CONFIGURATION REQUIRED" | "SMTP_SEND_FAILED" | "ENQUEUE_FAILED"; id: EmailTemplateId; queued: boolean; duplicate: false; outboxId: string | null };
 
 export async function sendTemplatedEmail(params: {
   to: string;
@@ -17,26 +17,40 @@ export async function sendTemplatedEmail(params: {
   flush?: boolean;
 }): Promise<SendEmailResult> {
   const template = emailTemplate(params.template);
-  const queued = await enqueueEmail({
-    type: params.template,
-    to: params.to,
-    userId: params.userId,
-    workspaceId: params.workspaceId,
-    idempotencyKey: params.idempotencyKey ?? `${params.template}:${params.to}:${Date.now()}`,
-    vars: params.vars,
-    rawToken: params.rawToken,
-    flush: params.flush,
-  });
-  if (queued.duplicate) {
-    return { ok: true, id: template.id, delivered: false, duplicate: true };
+  try {
+    const queued = await enqueueEmail({
+      type: params.template,
+      to: params.to,
+      userId: params.userId,
+      workspaceId: params.workspaceId,
+      idempotencyKey: params.idempotencyKey ?? `${params.template}:${params.to}:${Date.now()}`,
+      vars: params.vars,
+      rawToken: params.rawToken,
+      flush: params.flush,
+    });
+    if (queued.duplicate) {
+      return { ok: true, id: template.id, delivered: queued.sent, duplicate: true, queued: false, outboxId: queued.id };
+    }
+    if (queued.sent) {
+      return { ok: true, id: template.id, delivered: true, duplicate: false, queued: true, outboxId: queued.id };
+    }
+    if (queued.queued && params.flush === false) {
+      return { ok: true, id: template.id, delivered: false, duplicate: false, queued: true, outboxId: queued.id };
+    }
+    if (!isEmailConfigured()) {
+      return { ok: false, reason: "EMAIL: CONFIGURATION REQUIRED", id: template.id, queued: queued.queued, duplicate: false, outboxId: queued.id };
+    }
+    return { ok: false, reason: "SMTP_SEND_FAILED", id: template.id, queued: queued.queued, duplicate: false, outboxId: queued.id };
+  } catch {
+    return { ok: false, reason: "ENQUEUE_FAILED", id: template.id, queued: false, duplicate: false, outboxId: null };
   }
-  if (queued.sent) {
-    return { ok: true, id: template.id, delivered: true, duplicate: false };
-  }
-  if (!isEmailConfigured()) {
-    return { ok: false, reason: "EMAIL: CONFIGURATION REQUIRED", id: template.id, queued: queued.queued };
-  }
-  return { ok: false, reason: "SMTP_SEND_FAILED", id: template.id, queued: queued.queued };
+}
+
+export function canConfirmVerificationResend(
+  result: { queued: boolean; duplicate?: boolean },
+  configured: boolean,
+) {
+  return Boolean(result.queued || result.duplicate) && configured;
 }
 
 export async function sendVerificationEmail(params: {

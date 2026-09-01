@@ -55,18 +55,24 @@ async function boot() {
   const bootMod = await import("@/lib/queue/boot");
   const queueMod = await import("@/lib/queue");
   const heartbeat = await import("@/lib/queue/heartbeat");
+  const emailConfig = await import("@/lib/email/config");
   const email = await import("@/lib/email/outbox");
   const logMod = await import("@/lib/logger");
   logger = logMod.logger;
   stopClipLabWorkers = bootMod.stopClipLabWorkers;
   closeQueueRuntime = queueMod.closeQueueRuntime;
 
+  emailConfig.logSmtpEnvPresence();
   bootMod.startClipLabWorkers();
   void heartbeat.beatWorker();
-  void email.processEmailOutbox().catch(() => undefined);
+  const sweepEmail = () =>
+    email.processEmailOutbox().catch((error) => {
+      logger?.warn({ errType: error instanceof Error ? error.name : "Error" }, "EMAIL SMTP ERROR: Timeout");
+    });
+  void sweepEmail();
   heartbeatTimer = setInterval(() => {
     void heartbeat.beatWorker().catch(() => undefined);
-    void email.processEmailOutbox().catch(() => undefined);
+    void sweepEmail();
   }, 15_000);
   logger.info("CLIPLAB worker process started");
 }

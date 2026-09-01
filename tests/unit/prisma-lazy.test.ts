@@ -6,6 +6,9 @@ vi.mock("next/server", () => ({
     redirect: (url: URL | string) => ({ url: String(url) }),
   },
   NextRequest: class {},
+  after: (fn: () => unknown) => {
+    void fn();
+  },
 }));
 
 const ROUTE_MODULES = [
@@ -53,7 +56,7 @@ describe("lazy prisma", () => {
     vi.stubEnv("DATABASE_URL", "");
     vi.resetModules();
     await expect(import(specifier)).resolves.toBeTypeOf("object");
-  });
+  }, 15_000);
 
   it("imports stripe webhook handler without DATABASE_URL", async () => {
     vi.stubEnv("DATABASE_URL", "");

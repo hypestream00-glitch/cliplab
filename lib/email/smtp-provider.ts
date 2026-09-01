@@ -1,23 +1,29 @@
 import nodemailer from "nodemailer";
 import { withTimeout } from "@/lib/async/timeout";
 import { logger } from "@/lib/logger";
-import { isEmailConfigured, smtpAuthPassword, smtpFromAddress, smtpFromName, smtpPort, smtpSecure } from "@/lib/email/config";
+import {
+  isEmailConfigured,
+  smtpAuthPassword,
+  smtpAuthUser,
+  smtpFromAddress,
+  smtpFromName,
+  smtpPort,
+  smtpSecure,
+} from "@/lib/email/config";
 import type { EmailMessage, EmailProvider } from "@/lib/email/provider";
-
-function smtpAuthUser() {
-  return process.env.SMTP_USER?.trim() ?? "";
-}
 
 function createTransport() {
   const secure = smtpSecure();
+  const host = process.env.SMTP_HOST?.trim();
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST?.trim(),
+    host,
     port: smtpPort(),
     secure,
     requireTLS: !secure,
     connectionTimeout: 8_000,
     greetingTimeout: 8_000,
     socketTimeout: 12_000,
+    tls: { minVersion: "TLSv1.2", servername: host },
     auth: {
       user: smtpAuthUser(),
       pass: smtpAuthPassword(),
@@ -38,10 +44,12 @@ function addresses(value: unknown): string[] {
     .filter(Boolean);
 }
 
-function smtpFailureCode(error: unknown): string {
+export function smtpFailureCode(error: unknown): string {
+  if (error instanceof Error && /timeout/i.test(error.message)) return "SMTP_TIMEOUT";
   const code =
     error && typeof error === "object" && "code" in error ? String((error as { code?: string }).code ?? "") : "";
   if (code === "EAUTH") return "SMTP_AUTH_FAILED";
+  if (code === "ETIMEDOUT" || code === "ESOCKET" || code === "ECONNECTION") return "SMTP_CONNECTION_FAILED";
   return "SMTP_SEND_FAILED";
 }
 
@@ -50,8 +58,10 @@ export class SmtpEmailProvider implements EmailProvider {
 
   async send(message: EmailMessage): Promise<{ ok: true } | { ok: false; error: string }> {
     if (!isEmailConfigured()) {
+      logger.warn("EMAIL SMTP ERROR: CONFIGURATION_REQUIRED");
       return { ok: false, error: "EMAIL: CONFIGURATION REQUIRED" };
     }
+    logger.info("EMAIL SMTP START");
     try {
       const transporter = createTransport();
       const info = await withTimeout(
@@ -68,13 +78,14 @@ export class SmtpEmailProvider implements EmailProvider {
       const accepted = addresses(info.accepted);
       const rejected = addresses(info.rejected);
       if (!accepted.length || rejected.length) {
-        logger.warn({ accepted: accepted.length, rejected: rejected.length }, "smtp message not accepted");
+        logger.warn("EMAIL SMTP ERROR: SMTP_NOT_ACCEPTED");
         return { ok: false, error: "SMTP_NOT_ACCEPTED" };
       }
+      logger.info("EMAIL SMTP SUCCESS");
       return { ok: true };
     } catch (error) {
       const code = smtpFailureCode(error);
-      logger.warn({ code }, "smtp send failed");
+      logger.warn(`EMAIL SMTP ERROR: ${code}`);
       return { ok: false, error: code };
     }
   }

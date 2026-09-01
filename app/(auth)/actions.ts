@@ -8,11 +8,14 @@ import { prisma } from "@/lib/db/prisma";
 import { signUpSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "@/lib/validations";
 import { rateLimitGuard } from "@/lib/security/guard";
 import { consumeAuthToken, issueAuthToken, latestTokenIssuedAt } from "@/lib/email/tokens";
-import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "@/lib/email/send";
+import { canConfirmVerificationResend, sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "@/lib/email/send";
 import { clearVerifyEmailHint, setVerifyEmailHint } from "@/lib/email/hint-cookie";
 import { logger } from "@/lib/logger";
 import { completeSignup, SIGNUP_LOG, signupErrorLog } from "@/lib/auth/register";
 import { isNextRedirectError, safeErrorType, withTimeout } from "@/lib/async/timeout";
+import { after } from "next/server";
+import { flushEmail, processEmailOutbox } from "@/lib/email/outbox";
+import { isEmailConfigured } from "@/lib/email/config";
 
 const RESEND_COOLDOWN_MS = 60_000;
 
@@ -51,6 +54,17 @@ export async function registerAction(_prev: unknown, formData: FormData) {
     logger.info(SIGNUP_LOG.sessionOk);
     logger.info({ userId: result.userId }, SIGNUP_LOG.complete);
     logger.info({ userId: result.userId }, "user registered pending email verification");
+    const outboxId = result.outboxId;
+    after(() => {
+      void (async () => {
+        try {
+          if (outboxId) await withTimeout(flushEmail(outboxId), 8_000, "signup email flush");
+          else await processEmailOutbox(5);
+        } catch (error) {
+          logger.warn({ errType: safeErrorType(error) }, "EMAIL SMTP ERROR: Timeout");
+        }
+      })();
+    });
     redirect("/verify-email");
   } catch (error) {
     if (isNextRedirectError(error)) throw error;
@@ -143,19 +157,57 @@ export async function resetPasswordAction(_prev: unknown, formData: FormData) {
 }
 
 export async function resendVerificationAction() {
+  logger.info("EMAIL RESEND START");
   const limited = await rateLimitGuard("resend-verification", 4, 15 * 60_000);
-  if (limited) return limited;
+  if (limited) {
+    logger.warn("EMAIL RESEND ERROR: RATE_LIMIT");
+    return limited;
+  }
   const email = await (await import("@/lib/email/hint-cookie")).getVerifyEmailHint();
-  if (!email) return { error: "Não encontramos um e-mail para reenviar. Entre ou crie a conta novamente." };
+  if (!email) {
+    logger.warn("EMAIL RESEND ERROR: NO_HINT");
+    return { error: "Não encontramos um e-mail para reenviar. Entre ou crie a conta novamente." };
+  }
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || user.emailVerified) return { ok: true as const };
   const last = await latestTokenIssuedAt("verify", email);
   if (last && Date.now() - last.getTime() < RESEND_COOLDOWN_MS) {
+    logger.warn("EMAIL RESEND ERROR: COOLDOWN");
     return { error: "Aguarde um minuto antes de reenviar." };
   }
-  const rawToken = await issueAuthToken("verify", email);
-  await sendVerificationEmail({ to: email, userId: user.id, name: user.name, rawToken });
-  return { ok: true as const };
+  try {
+    const rawToken = await issueAuthToken("verify", email);
+    logger.info("EMAIL RESEND TOKEN CREATED");
+    const sent = await sendVerificationEmail({ to: email, userId: user.id, name: user.name, rawToken });
+    if (!canConfirmVerificationResend(sent, isEmailConfigured())) {
+      if (!sent.queued && !("duplicate" in sent && sent.duplicate)) {
+        logger.warn(`EMAIL RESEND ERROR: ${"reason" in sent ? sent.reason : "ENQUEUE_FAILED"}`);
+        return { error: "Não foi possível enfileirar o e-mail de verificação. Tente novamente." };
+      }
+      logger.warn("EMAIL RESEND ERROR: CONFIGURATION_REQUIRED");
+      return { error: "O serviço de e-mail ainda não está configurado. Tente novamente em alguns minutos." };
+    }
+    logger.info("EMAIL RESEND QUEUED");
+    const outboxId = sent.outboxId;
+    after(() => {
+      void (async () => {
+        try {
+          if (outboxId) {
+            const flush = await withTimeout(flushEmail(outboxId), 8_000, "resend email flush");
+            if (flush.sent) logger.info("EMAIL RESEND SMTP SUCCESS");
+          } else {
+            await processEmailOutbox(5);
+          }
+        } catch (error) {
+          logger.warn({ errType: safeErrorType(error) }, "EMAIL RESEND ERROR: Timeout");
+        }
+      })();
+    });
+    return { ok: true as const };
+  } catch (error) {
+    logger.warn({ errType: safeErrorType(error) }, `EMAIL RESEND ERROR: ${safeErrorType(error)}`);
+    return { error: "Não foi possível reenviar o e-mail. Tente novamente." };
+  }
 }
 
 export async function verifyEmailByToken(raw: string) {

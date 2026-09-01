@@ -86,10 +86,10 @@ export const SETUP_GUIDES: SetupGuide[] = [
   {
     id: "smtp",
     title: "E-mail transacional",
-    env: ["EMAIL_PROVIDER", "SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM", "SMTP_FROM_NAME", "APP_URL"],
+    env: ["EMAIL_PROVIDER", "SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASSWORD", "SMTP_PASS", "SMTP_FROM", "EMAIL_FROM", "SMTP_FROM_NAME", "APP_URL"],
     steps: [
       "Defina EMAIL_PROVIDER=smtp.",
-      "Preencha SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD e SMTP_FROM no servidor.",
+      "Preencha SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD (ou SMTP_PASS) e SMTP_FROM (ou EMAIL_FROM) no servidor web e no worker.",
       "Opcional: SMTP_SECURE=true em porta 465. SMTP_FROM_NAME=CLIPLAB.",
       "APP_URL deve ser a URL pública do app (links de verificação e senha).",
       "Reinicie o app. E-mails pendentes na outbox serão enviados automaticamente.",

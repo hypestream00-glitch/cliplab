@@ -16,6 +16,7 @@ export const LOG_REDACT_PATHS = [
   "client_key",
   "ENCRYPTION_KEY",
   "SMTP_PASSWORD",
+  "SMTP_PASS",
   "tokenCipher",
   "rawToken",
   "verifyLoginToken",

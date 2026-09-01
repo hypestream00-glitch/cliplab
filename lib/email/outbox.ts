@@ -6,7 +6,8 @@ import { isEmailConfigured } from "@/lib/email/config";
 import { getEmailProvider } from "@/lib/email/smtp-provider";
 import { renderEmailTemplate, type EmailTemplateId, type EmailTemplateVars } from "@/lib/email/templates";
 import { appPathUrl } from "@/lib/email/app-url";
-import { withTimeout } from "@/lib/async/timeout";
+import { withTimeout, safeErrorType } from "@/lib/async/timeout";
+import { isPublicHttpsUrl } from "@/lib/env/app-url";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type EnqueueEmailInput = {
@@ -30,6 +31,7 @@ function backoffMs(attempts: number) {
 }
 
 function withActionUrl(type: EmailTemplateId, vars: EmailTemplateVars, rawToken?: string): EmailTemplateVars {
+  if (vars.actionUrl && isPublicHttpsUrl(vars.actionUrl)) return vars;
   if (!rawToken) return vars;
   if (type === "verify-email") return { ...vars, actionUrl: appPathUrl(`/verify-email?token=${encodeURIComponent(rawToken)}`) };
   if (type === "password-reset") return { ...vars, actionUrl: appPathUrl(`/reset-password?token=${encodeURIComponent(rawToken)}`) };
@@ -38,14 +40,19 @@ function withActionUrl(type: EmailTemplateId, vars: EmailTemplateVars, rawToken?
 
 export async function enqueueEmail(input: EnqueueEmailInput) {
   const vars = input.vars ?? {};
-  const rendered = renderEmailTemplate(input.type, withActionUrl(input.type, vars, input.rawToken));
+  const varsWithUrl = withActionUrl(input.type, vars, input.rawToken);
+  const rendered = renderEmailTemplate(input.type, varsWithUrl);
   const payload: Record<string, string> = {};
-  if (vars.name) payload.name = vars.name;
-  if (vars.planName) payload.planName = vars.planName;
-  if (vars.periodEnd) payload.periodEnd = vars.periodEnd;
-  if (vars.actionUrl) payload.actionUrl = vars.actionUrl;
+  if (varsWithUrl.name) payload.name = varsWithUrl.name;
+  if (varsWithUrl.planName) payload.planName = varsWithUrl.planName;
+  if (varsWithUrl.periodEnd) payload.periodEnd = varsWithUrl.periodEnd;
+  if (varsWithUrl.actionUrl) payload.actionUrl = varsWithUrl.actionUrl;
   if (input.rawToken) {
-    payload.tokenCipher = encryptSecret(input.rawToken);
+    try {
+      payload.tokenCipher = encryptSecret(input.rawToken);
+    } catch {
+      logger.warn({ type: input.type }, "EMAIL VERIFY TOKEN CIPHER SKIPPED");
+    }
   }
   try {
     const existing = await prisma.emailOutbox.findUnique({
@@ -70,13 +77,15 @@ export async function enqueueEmail(input: EnqueueEmailInput) {
         subject: rendered.subject,
         payload: payload as Prisma.InputJsonValue,
         status: "PENDING",
+        nextAttemptAt: new Date(),
       },
     });
+    logger.info({ type: input.type, outboxId: row.id }, input.type === "verify-email" ? "EMAIL VERIFY QUEUED" : "EMAIL QUEUED");
     if (input.flush !== false) {
       try {
         await withTimeout(flushEmail(row.id), 8_000, "email flush");
-      } catch {
-        logger.warn({ type: input.type }, "email flush timed out; left queued");
+      } catch (error) {
+        logger.warn({ type: input.type, errType: safeErrorType(error) }, "EMAIL SMTP ERROR: Timeout");
       }
     }
     const latest = await prisma.emailOutbox.findUnique({ where: { id: row.id }, select: { status: true } });
@@ -94,15 +103,16 @@ export async function enqueueEmail(input: EnqueueEmailInput) {
   }
 }
 
-async function flushEmail(id: string) {
+export async function flushEmail(id: string) {
   const row = await prisma.emailOutbox.findUnique({ where: { id } });
-  if (!row || row.status === "SENT") return;
+  if (!row || row.status === "SENT") return { sent: row?.status === "SENT" };
   if (!isEmailConfigured()) {
     await prisma.emailOutbox.update({
       where: { id },
       data: { lastError: "EMAIL: CONFIGURATION REQUIRED" },
     });
-    return;
+    logger.warn("EMAIL SMTP ERROR: CONFIGURATION_REQUIRED");
+    return { sent: false, reason: "EMAIL: CONFIGURATION REQUIRED" as const };
   }
   await prisma.emailOutbox.update({
     where: { id },
@@ -144,7 +154,7 @@ async function flushEmail(id: string) {
       },
     });
     logger.info({ type: row.type, toHost: row.recipient.split("@")[1] ?? "unknown" }, "email sent");
-    return;
+    return { sent: true as const };
   }
   const attempts = row.attempts + 1;
   const failed = attempts >= 8;
@@ -157,10 +167,16 @@ async function flushEmail(id: string) {
       nextAttemptAt: new Date(Date.now() + backoffMs(attempts)),
     },
   });
+  logger.warn(`EMAIL SMTP ERROR: ${result.error}`);
+  return { sent: false as const, reason: result.error };
 }
 
 export async function processEmailOutbox(limit = 20) {
   if (!isEmailConfigured()) {
+    const pending = (await prisma.emailOutbox.count({
+      where: { status: { in: ["PENDING", "SENDING"] } },
+    })) ?? 0;
+    if (pending > 0) logger.warn("EMAIL SMTP ERROR: CONFIGURATION_REQUIRED");
     return { processed: 0, reason: "EMAIL: CONFIGURATION REQUIRED" as const };
   }
   const now = new Date();
@@ -177,7 +193,11 @@ export async function processEmailOutbox(limit = 20) {
     take: limit,
   });
   for (const row of due) {
-    await flushEmail(row.id);
+    try {
+      await flushEmail(row.id);
+    } catch (error) {
+      logger.warn({ errType: safeErrorType(error), outboxId: row.id }, `EMAIL SMTP ERROR: ${safeErrorType(error)}`);
+    }
   }
   return { processed: due.length };
 }

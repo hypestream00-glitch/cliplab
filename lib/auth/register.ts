@@ -58,15 +58,19 @@ export async function provisionWorkspace(user: { id: string; name: string | null
       },
     });
   }
-  if (process.env.SOCIAL_PROVIDER !== "native" && process.env.UPLOAD_POST_API_KEY?.trim()) {
+  return workspace;
+}
+
+function scheduleUploadPostProvisioning(workspaceId: string) {
+  if (process.env.SOCIAL_PROVIDER === "native" || !process.env.UPLOAD_POST_API_KEY?.trim()) return;
+  void (async () => {
     try {
       const { ensureUploadPostProfile } = await import("@/lib/social/upload-post/profiles");
-      await withTimeout(ensureUploadPostProfile(workspace.id), 5_000, "upload-post profile");
+      await withTimeout(ensureUploadPostProfile(workspaceId), 5_000, "upload-post profile");
     } catch {
-      logger.warn({ workspaceId: workspace.id }, "SIGNUP ERROR: UploadPostTimeout");
+      logger.warn({ workspaceId }, "UPLOADPOST PROFILE SKIPPED");
     }
-  }
-  return workspace;
+  })();
 }
 
 export type CompleteSignupInput = {
@@ -76,7 +80,7 @@ export type CompleteSignupInput = {
 };
 
 export type CompleteSignupResult =
-  | { ok: true; userId: string; workspaceId: string; email: string }
+  | { ok: true; userId: string; workspaceId: string; email: string; outboxId: string | null }
   | { ok: false; error: string; code: "EMAIL_IN_USE" | "DATABASE" | "HASH" | "EMAIL_QUEUE" };
 
 export async function completeSignup(input: CompleteSignupInput): Promise<CompleteSignupResult> {
@@ -115,18 +119,24 @@ export async function completeSignup(input: CompleteSignupInput): Promise<Comple
     logger.info({ userId: user.id }, SIGNUP_LOG.userCreated);
     const workspace = await withTimeout(provisionWorkspace(user), 12_000, "signup workspace");
     logger.info({ workspaceId: workspace.id }, SIGNUP_LOG.workspaceCreated);
+    scheduleUploadPostProvisioning(workspace.id);
 
     try {
       const rawToken = await issueAuthToken("verify", email);
-      await withTimeout(
+      logger.info("EMAIL VERIFY TOKEN CREATED");
+      const sent = await withTimeout(
         sendVerificationEmail({ to: email, userId: user.id, name: user.name, rawToken }),
         5_000,
         "signup email queue",
       );
+      if (!sent.queued && !sent.duplicate) {
+        logger.warn(signupErrorLog("EMAIL_QUEUE"));
+      }
+      return { ok: true, userId: user.id, workspaceId: workspace.id, email, outboxId: sent.outboxId ?? null };
     } catch {
       logger.warn(signupErrorLog("EMAIL_QUEUE"));
+      return { ok: true, userId: user.id, workspaceId: workspace.id, email, outboxId: null };
     }
-    return { ok: true, userId: user.id, workspaceId: workspace.id, email };
   } catch (error) {
     if (isPrismaUniqueViolation(error)) {
       logger.info(signupErrorLog("EMAIL_IN_USE"));

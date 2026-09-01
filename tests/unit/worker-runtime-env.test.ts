@@ -63,6 +63,8 @@ describe("start-worker env preservation", () => {
     const index = readFileSync(path.join(root, "workers/index.ts"), "utf8");
     expect(index).toContain('bootLog("WORKER STARTED")');
     expect(index).toContain('await import("@/lib/queue/boot")');
+    expect(index).toContain("processEmailOutbox");
+    expect(index).toContain("logSmtpEnvPresence");
     expect(index).not.toMatch(/import\s+\{[^}]*startClipLabWorkers/);
   });
 
