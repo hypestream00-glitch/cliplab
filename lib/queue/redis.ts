@@ -1,17 +1,18 @@
 import IORedis from "ioredis";
+import { runtimeEnv } from "@/lib/env/runtime";
 
 let shared: IORedis | null | undefined;
 
 export function isRedisConfigured() {
-  return Boolean(process.env.REDIS_URL?.trim());
+  return Boolean(runtimeEnv("REDIS_URL"));
 }
 
 export function redisUsesTls() {
-  return (process.env.REDIS_URL ?? "").trim().startsWith("rediss://");
+  return runtimeEnv("REDIS_URL").startsWith("rediss://");
 }
 
 export function bullmqConnection() {
-  const url = process.env.REDIS_URL?.trim();
+  const url = runtimeEnv("REDIS_URL");
   if (!url) return null;
   return {
     url,
@@ -25,7 +26,7 @@ export function bullmqConnection() {
 }
 
 export function createRedisConnection() {
-  const url = process.env.REDIS_URL?.trim();
+  const url = runtimeEnv("REDIS_URL");
   if (!url) return null;
   const client = new IORedis(url, {
     maxRetriesPerRequest: null,

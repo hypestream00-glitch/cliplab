@@ -24,5 +24,15 @@ describe("Railway worker image", () => {
     expect(startWorker).toContain("worker.mjs");
     expect(startWorker).toContain("tsx");
     expect(startWorker).not.toContain("next");
+    expect(startWorker).not.toContain("env: process.env");
+    expect(startWorker).not.toContain("dotenv");
+  });
+
+  it("does not inline process.env at worker bundle time", () => {
+    const build = readFileSync("scripts/build-worker.mjs", "utf8");
+    expect(build).not.toContain("define:");
+    expect(build).not.toContain("process.env.NODE_ENV");
+    expect(build).not.toContain("process.env.REDIS_URL");
+    expect(build).not.toContain("process.env.DATABASE_URL");
   });
 });

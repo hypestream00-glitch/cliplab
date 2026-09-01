@@ -1,4 +1,5 @@
 import "@/lib/env/load-local";
+import { logWorkerEnvPresence, runtimeEnvPresent } from "@/lib/env/runtime";
 import { startClipLabWorkers, stopClipLabWorkers } from "@/lib/queue/boot";
 import { closeQueueRuntime } from "@/lib/queue";
 import { beatWorker } from "@/lib/queue/heartbeat";
@@ -10,6 +11,10 @@ let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let shuttingDown = false;
 
 async function boot() {
+  logWorkerEnvPresence();
+  if (process.argv.includes("--check-env")) {
+    process.exit(runtimeEnvPresent("REDIS_URL") && runtimeEnvPresent("DATABASE_URL") ? 0 : 1);
+  }
   await assertWorkerPreflight();
   startClipLabWorkers();
   void beatWorker();

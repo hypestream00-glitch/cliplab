@@ -36,9 +36,7 @@ await esbuild.build({
   packages: "external",
   sourcemap: false,
   logLevel: "info",
-  define: {
-    "process.env.NODE_ENV": JSON.stringify("production"),
-  },
+  // Never define process.env.* here. REDIS_URL / DATABASE_URL / S3_* must stay runtime reads.
   plugins: [
     {
       name: "alias-at",
