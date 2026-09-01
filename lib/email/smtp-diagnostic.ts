@@ -2,7 +2,7 @@ import { lookup as dnsLookup } from "node:dns/promises";
 import { connect as tcpConnectRaw } from "node:net";
 import { connect as tlsConnectRaw } from "node:tls";
 import { withTimeout } from "@/lib/async/timeout";
-import { isEmailConfigured, smtpPort } from "@/lib/email/config";
+import { emailProviderName, isEmailConfigured, smtpPort } from "@/lib/email/config";
 import { smtpFailureCode } from "@/lib/email/smtp-provider";
 
 const STEP_MS = 8_000;
@@ -134,6 +134,11 @@ export async function runSmtpConnectivityDiagnostic(deps: SmtpDiagnosticDeps = d
     verify: "FAIL",
     error: null,
   };
+  if (emailProviderName() === "resend") {
+    result.error = "SKIPPED_RESEND";
+    bootLog("SMTP DIAGNOSTIC SKIPPED: resend");
+    return result;
+  }
   const host = smtpDiagnosticHost();
   const port = smtpPort();
   if (!host) {

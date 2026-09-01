@@ -2,7 +2,8 @@ import nodemailer from "nodemailer";
 import { withTimeout } from "@/lib/async/timeout";
 import { logger } from "@/lib/logger";
 import {
-  isEmailConfigured,
+  emailProviderName,
+  isSmtpConfigured,
   smtpAuthPassword,
   smtpAuthUser,
   smtpFromAddress,
@@ -57,7 +58,11 @@ export class SmtpEmailProvider implements EmailProvider {
   name = "smtp";
 
   async send(message: EmailMessage): Promise<{ ok: true } | { ok: false; error: string }> {
-    if (!isEmailConfigured()) {
+    if (emailProviderName() === "resend") {
+      logger.warn("EMAIL SMTP ERROR: SKIPPED_RESEND");
+      return { ok: false, error: "SMTP_SKIPPED_RESEND" };
+    }
+    if (!isSmtpConfigured()) {
       logger.warn("EMAIL SMTP ERROR: CONFIGURATION_REQUIRED");
       return { ok: false, error: "EMAIL: CONFIGURATION REQUIRED" };
     }
@@ -91,7 +96,8 @@ export class SmtpEmailProvider implements EmailProvider {
   }
 
   async verifyConnection() {
-    if (!isEmailConfigured()) return { ok: false as const, error: "EMAIL: CONFIGURATION REQUIRED" };
+    if (emailProviderName() === "resend") return { ok: false as const, error: "SMTP_SKIPPED_RESEND" };
+    if (!isSmtpConfigured()) return { ok: false as const, error: "EMAIL: CONFIGURATION REQUIRED" };
     try {
       const transporter = createTransport();
       await withTimeout(transporter.verify(), 8_000, "smtp verify");
@@ -102,8 +108,4 @@ export class SmtpEmailProvider implements EmailProvider {
       return { ok: false as const, error: code === "SMTP_AUTH_FAILED" ? "SMTP_AUTH_FAILED" : "SMTP_VERIFY_FAILED" };
     }
   }
-}
-
-export function getEmailProvider(): EmailProvider {
-  return new SmtpEmailProvider();
 }

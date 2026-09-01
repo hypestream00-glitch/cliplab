@@ -37,7 +37,10 @@ export async function runConnectionProbe(target: ProbeTarget): Promise<ProbeResu
     };
   }
   if (target === "smtp") {
-    const { isEmailConfigured, emailConfigurationDetail } = await import("@/lib/email/config");
+    const { emailProviderName, isEmailConfigured, emailConfigurationDetail } = await import("@/lib/email/config");
+    if (emailProviderName() === "resend") {
+      return { target, ok: isEmailConfigured(), message: isEmailConfigured() ? "RESEND CONFIGURED" : emailConfigurationDetail() };
+    }
     if (!isEmailConfigured()) {
       return { target, ok: false, message: emailConfigurationDetail() };
     }

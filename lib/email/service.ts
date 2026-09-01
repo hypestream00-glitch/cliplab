@@ -1,4 +1,6 @@
-import { getEmailProvider, SmtpEmailProvider } from "@/lib/email/smtp-provider";
+import { getEmailProvider, sendEmail } from "@/lib/email/send-email";
+import { SmtpEmailProvider } from "@/lib/email/smtp-provider";
+import { ResendEmailProvider } from "@/lib/email/resend-provider";
 import type { EmailMessage, EmailProvider } from "@/lib/email/provider";
 import {
   sendPasswordResetEmail,
@@ -28,5 +30,5 @@ export class ClipLabMailer {
   sendTemplatedEmail = sendTemplatedEmail;
 }
 
-export { SmtpEmailProvider, getEmailProvider };
+export { SmtpEmailProvider, ResendEmailProvider, getEmailProvider, sendEmail };
 export type { EmailProvider, EmailMessage };

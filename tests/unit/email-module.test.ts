@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { escapeHtml, maskEmail } from "@/lib/email/escape";
 import { appOrigin, appPathUrl, isSafeAppPath } from "@/lib/email/app-url";
-import { emailMissingVars, emailProviderStatus, isEmailConfigured, logSmtpEnvPresence, smtpSafeEnvCheck } from "@/lib/email/config";
+import { emailMissingVars, emailProviderStatus, isEmailConfigured, logEmailProviderPresence, logSmtpEnvPresence, smtpSafeEnvCheck } from "@/lib/email/config";
 import { canConfirmVerificationResend } from "@/lib/email/send";
 import { smtpFailureCode } from "@/lib/email/smtp-provider";
 import { LOG_REDACT_PATHS, logger } from "@/lib/logger";
@@ -30,6 +30,7 @@ const SMTP_KEYS = [
   "SMTP_PASS",
   "SMTP_FROM",
   "EMAIL_FROM",
+  "RESEND_API_KEY",
 ] as const;
 
 function snapshotSmtpEnv() {
@@ -56,16 +57,13 @@ function setSmtpConfigured() {
   process.env.SMTP_FROM = "from@example.com";
 }
 
-vi.mock("@/lib/email/smtp-provider", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/email/smtp-provider")>();
-  return {
-    ...actual,
-    getEmailProvider: () => ({
-      name: "smtp",
-      send: () => sendMock(),
-    }),
-  };
-});
+vi.mock("@/lib/email/send-email", () => ({
+  sendEmail: () => sendMock(),
+  getEmailProvider: () => ({
+    name: "smtp",
+    send: () => sendMock(),
+  }),
+}));
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
@@ -171,6 +169,25 @@ describe("email security helpers", () => {
     expect(JSON.stringify(smtpSafeEnvCheck())).not.toContain(secret);
     expect(LOG_REDACT_PATHS).toContain("SMTP_PASS");
     expect(LOG_REDACT_PATHS).toContain("SMTP_PASSWORD");
+    expect(LOG_REDACT_PATHS).toContain("RESEND_API_KEY");
+    restoreSmtpEnv(prev);
+  });
+
+  it("reports Resend presence without printing the API key", () => {
+    const prev = snapshotSmtpEnv();
+    const secret = "re_super_secret_live_key";
+    clearSmtpEnv();
+    process.env.RESEND_API_KEY = secret;
+    process.env.EMAIL_FROM = "from@example.com";
+    const lines: string[] = [];
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+      lines.push(String(chunk).replace(/\n$/, ""));
+      return true;
+    });
+    logEmailProviderPresence();
+    spy.mockRestore();
+    expect(lines).toEqual(["RESEND_API_KEY PRESENT: true", "EMAIL PROVIDER: resend"]);
+    expect(lines.join("\n")).not.toContain(secret);
     restoreSmtpEnv(prev);
   });
 

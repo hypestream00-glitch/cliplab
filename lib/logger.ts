@@ -41,6 +41,7 @@ export const LOG_REDACT_PATHS = [
   "*.accessTokenEncrypted",
   "*.refreshTokenEncrypted",
   "SMTP_USER",
+  "RESEND_API_KEY",
   "signedUrl",
   "uploadUrl",
 ];

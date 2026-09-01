@@ -6,7 +6,7 @@ import {
   type SmtpDiagnosticDeps,
 } from "@/lib/email/smtp-diagnostic";
 
-const SMTP_KEYS = ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASSWORD", "SMTP_PASS", "SMTP_FROM"] as const;
+const SMTP_KEYS = ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASSWORD", "SMTP_PASS", "SMTP_FROM", "RESEND_API_KEY"] as const;
 
 const prevSmtp = Object.fromEntries(SMTP_KEYS.map((key) => [key, process.env[key]]));
 
@@ -22,6 +22,7 @@ function clearSmtp() {
 }
 
 function setSmtp() {
+  delete process.env.RESEND_API_KEY;
   process.env.SMTP_HOST = "smtp.gmail.com";
   process.env.SMTP_PORT = "465";
   process.env.SMTP_SECURE = "true";
@@ -159,5 +160,25 @@ describe("smtp connectivity diagnostic", () => {
       "SMTP DIAGNOSTIC VERIFY: FAIL",
       "SMTP DIAGNOSTIC ERROR: SMTP_CONNECTION_FAILED",
     ]);
+  });
+
+  it("does not open TCP/TLS or verify SMTP when Resend is the provider", async () => {
+    setSmtp();
+    process.env.RESEND_API_KEY = "re_secret_must_not_be_logged";
+    const deps = okDeps();
+    const lines: string[] = [];
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      lines.push(String(chunk).replace(/\n$/, ""));
+      return true;
+    });
+    const result = await runSmtpConnectivityDiagnostic(deps);
+    spy.mockRestore();
+    expect(result.error).toBe("SKIPPED_RESEND");
+    expect(deps.lookup).not.toHaveBeenCalled();
+    expect(deps.tcpConnect).not.toHaveBeenCalled();
+    expect(deps.tlsHandshake).not.toHaveBeenCalled();
+    expect(deps.verifySmtp).not.toHaveBeenCalled();
+    expect(lines).toEqual(["SMTP DIAGNOSTIC SKIPPED: resend"]);
+    expect(lines.join("\n")).not.toContain("re_secret_must_not_be_logged");
   });
 });

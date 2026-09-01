@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { isPrismaUniqueViolation } from "@/lib/webhooks/idempotency";
 import { encryptSecret, decryptSecret } from "@/lib/security/crypto";
 import { isEmailConfigured } from "@/lib/email/config";
-import { getEmailProvider } from "@/lib/email/smtp-provider";
+import { sendEmail } from "@/lib/email/send-email";
 import { renderEmailTemplate, type EmailTemplateId, type EmailTemplateVars } from "@/lib/email/templates";
 import { appPathUrl } from "@/lib/email/app-url";
 import { withTimeout, safeErrorType } from "@/lib/async/timeout";
@@ -134,7 +134,7 @@ export async function flushEmail(id: string) {
     actionUrl: payload.actionUrl,
   };
   const rendered = renderEmailTemplate(row.type as EmailTemplateId, withActionUrl(row.type as EmailTemplateId, vars, rawToken));
-  const result = await getEmailProvider().send({
+  const result = await sendEmail({
     to: row.recipient,
     subject: rendered.subject,
     html: rendered.html,

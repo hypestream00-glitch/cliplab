@@ -7,15 +7,21 @@ const SMTP_PASSWORD_PLACEHOLDERS = new Set([
   "your_password_here",
 ]);
 
-export type EmailProviderName = "smtp";
+const RESEND_KEY_PLACEHOLDERS = new Set(["changeme", "your_api_key_here", "re_123"]);
+
+export type EmailProviderName = "resend" | "smtp" | "disabled";
 
 function envPresent(name: string) {
   return Boolean(process.env[name]?.trim());
 }
 
-export function emailProviderName(): EmailProviderName {
-  const value = (process.env.EMAIL_PROVIDER ?? "smtp").trim().toLowerCase();
-  return value === "smtp" ? "smtp" : "smtp";
+export function resendApiKey() {
+  return process.env.RESEND_API_KEY?.trim() ?? "";
+}
+
+export function resendApiKeyPresent() {
+  const key = resendApiKey();
+  return key.length > 0 && !RESEND_KEY_PLACEHOLDERS.has(key);
 }
 
 export function smtpPort() {
@@ -58,8 +64,25 @@ export function emailMissingVars() {
   return missing;
 }
 
+export function isSmtpConfigured() {
+  return emailMissingVars().length === 0;
+}
+
+export function isResendConfigured() {
+  return resendApiKeyPresent() && smtpFromAddress().length > 0;
+}
+
+export function emailProviderName(): EmailProviderName {
+  if (resendApiKeyPresent()) return "resend";
+  if (isSmtpConfigured()) return "smtp";
+  return "disabled";
+}
+
 export function isEmailConfigured() {
-  return emailProviderName() === "smtp" && emailMissingVars().length === 0;
+  const provider = emailProviderName();
+  if (provider === "resend") return isResendConfigured();
+  if (provider === "smtp") return isSmtpConfigured();
+  return false;
 }
 
 export function emailProviderStatus() {
@@ -67,7 +90,10 @@ export function emailProviderStatus() {
 }
 
 export function emailConfigurationDetail() {
-  if (isEmailConfigured()) return "EMAIL PROVIDER: smtp · SMTP: CONNECTED";
+  const provider = emailProviderName();
+  if (provider === "resend" && isResendConfigured()) return "EMAIL PROVIDER: resend";
+  if (provider === "smtp" && isSmtpConfigured()) return "EMAIL PROVIDER: smtp · SMTP: CONNECTED";
+  if (provider === "resend") return "EMAIL: CONFIGURATION REQUIRED (SMTP_FROM)";
   const missing = emailMissingVars();
   return `EMAIL: CONFIGURATION REQUIRED (${missing.join(", ") || "incomplete"})`;
 }
@@ -90,4 +116,9 @@ export function logSmtpEnvPresence() {
   process.stdout.write(`SMTP_USER PRESENT: ${check.SMTP_USER}\n`);
   process.stdout.write(`SMTP_PASS PRESENT: ${check.SMTP_PASS}\n`);
   process.stdout.write(`SMTP_FROM/EMAIL_FROM PRESENT: ${check.SMTP_FROM}\n`);
+}
+
+export function logEmailProviderPresence() {
+  process.stdout.write(`RESEND_API_KEY PRESENT: ${resendApiKeyPresent()}\n`);
+  process.stdout.write(`EMAIL PROVIDER: ${emailProviderName()}\n`);
 }

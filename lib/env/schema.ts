@@ -88,6 +88,7 @@ export const envSchema = z.object({
   SMTP_FROM: optionalString,
   EMAIL_FROM: optionalString,
   SMTP_FROM_NAME: optionalString,
+  RESEND_API_KEY: optionalString,
   APP_URL: optionalUrl,
   SENTRY_DSN: optionalUrl,
   CLIPLAB_EMBED_WORKERS: optionalBool,

@@ -60,12 +60,17 @@ async function boot() {
   closeQueueRuntime = queueMod.closeQueueRuntime;
 
   emailConfig.logSmtpEnvPresence();
+  emailConfig.logEmailProviderPresence();
   bootMod.startClipLabWorkers();
-  try {
-    const smtpDiag = await import("@/lib/email/smtp-diagnostic");
-    await smtpDiag.runSmtpConnectivityDiagnostic();
-  } catch {
-    process.stdout.write("SMTP DIAGNOSTIC ERROR: SMTP_CONNECTION_FAILED\n");
+  if (emailConfig.emailProviderName() !== "resend") {
+    try {
+      const smtpDiag = await import("@/lib/email/smtp-diagnostic");
+      await smtpDiag.runSmtpConnectivityDiagnostic();
+    } catch {
+      process.stdout.write("SMTP DIAGNOSTIC ERROR: SMTP_CONNECTION_FAILED\n");
+    }
+  } else {
+    process.stdout.write("SMTP DIAGNOSTIC SKIPPED: resend\n");
   }
   logger.info("CLIPLAB worker process started");
 }

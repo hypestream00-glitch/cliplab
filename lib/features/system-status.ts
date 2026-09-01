@@ -238,6 +238,7 @@ function socialStatusRows(params: {
 
 async function emailStatusRows(): Promise<ReadinessRow[]> {
   const configured = isEmailConfigured();
+  const provider = emailProviderName();
   let stats = { pending: 0, sending: 0, sent: 0, failed: 0, lastSent: null as { type: string; sentAt: Date | null } | null, lastFailed: null as { type: string; updatedAt: Date } | null };
   try {
     stats = await emailOutboxStats();
@@ -246,7 +247,7 @@ async function emailStatusRows(): Promise<ReadinessRow[]> {
   }
   const smtpCode: FeatureCode = configured ? "REAL" : "CONFIG_REQUIRED";
   return [
-    row("email-provider", "smtp", "EMAIL PROVIDER", smtpCode, emailProviderName(), "smtp"),
+    row("email-provider", "smtp", "EMAIL PROVIDER", smtpCode, provider, "smtp"),
     row(
       "smtp",
       "smtp",
