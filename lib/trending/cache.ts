@@ -21,10 +21,14 @@ export async function writeTrendingCache(key: string, value: unknown, ttlSec = D
   return true;
 }
 
-export function youtubeTrendingCacheKey(region = "BR") {
-  return `trending:youtube:${region.toUpperCase()}`;
+export function youtubeTrendingCacheKey(region = "BR", category = "all") {
+  return `trending:youtube:${region.toUpperCase()}:${category || "all"}:popular`;
 }
 
 export function twitchTrendingCacheKey() {
   return "trending:twitch:popular";
+}
+
+export function kickTrendingCacheKey() {
+  return "trending:kick:livestreams";
 }

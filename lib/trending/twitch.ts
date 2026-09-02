@@ -62,6 +62,7 @@ export async function fetchTwitchPopular(deps: TrendingFetchDeps = {}): Promise<
         viewCount: typeof row.viewer_count === "number" ? row.viewer_count : null,
         publishedAt: row.started_at ? new Date(row.started_at) : null,
         category: /game/i.test(row.game_name ?? "") ? "Games" : "Entretenimento",
+        kind: "live",
       };
       return mapped;
     })
@@ -69,7 +70,7 @@ export async function fetchTwitchPopular(deps: TrendingFetchDeps = {}): Promise<
   return { platform: "TWITCH", available: true, items };
 }
 
-export function unsupportedTrending(platform: "KICK" | "TIKTOK" | "INSTAGRAM"): TrendingProviderResult {
+export function unsupportedTrending(platform: "KICK" | "TIKTOK" | "INSTAGRAM" | "BILIBILI"): TrendingProviderResult {
   return {
     platform,
     available: false,

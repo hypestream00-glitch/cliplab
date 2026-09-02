@@ -88,7 +88,7 @@ export default async function MetricsAccountsPage({ searchParams }: PageSearchPr
         <input name="q" defaultValue={q} placeholder="Buscar @username" className="h-8 w-56 rounded-md border bg-transparent px-2 text-[13px]" />
         <select name="platform" defaultValue={platform} className="h-8 rounded-md border bg-transparent px-2 text-[13px]">
           <option value="">Todas as redes</option>
-          {["TIKTOK", "INSTAGRAM", "FACEBOOK", "YOUTUBE", "X", "LINKEDIN", "THREADS", "PINTEREST", "REDDIT"].map((item) => (
+          {["TIKTOK", "INSTAGRAM", "FACEBOOK", "YOUTUBE", "X", "TWITCH", "KICK", "BILIBILI", "LINKEDIN", "THREADS", "PINTEREST", "REDDIT"].map((item) => (
             <option key={item}>{item}</option>
           ))}
         </select>

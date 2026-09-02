@@ -29,6 +29,10 @@ export default async function AdminNewCompetitionPage({ searchParams }: PageSear
             {item}
           </label>
         ))}
+        <p className="pt-2 text-[12px] text-muted-foreground">
+          Twitch, Kick, Bilibili, TikTok global e Instagram global não entram no payout automático sem métricas oficiais
+          verificadas. Tracking manual — não elegível para payout automático.
+        </p>
       </fieldset>
       <label className="block text-[13px]">Máx. clips<input name="maxClips" type="number" defaultValue={20} className="mt-1 h-10 w-full rounded-md border bg-transparent px-2" /></label>
       <label className="block text-[13px]">Regras<textarea name="rules" className="mt-1 h-24 w-full rounded-md border bg-transparent px-2 py-2" /></label>

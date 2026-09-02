@@ -16,6 +16,7 @@ function mockProfile(platform: SocialPlatform): SocialProfile {
     TWITCH: "studiolive",
     KICK: "studiolive",
     REDDIT: "studio_clips",
+    BILIBILI: "studio.bilibili",
   };
   return {
     externalAccountId: `mock_${platform.toLowerCase()}`,

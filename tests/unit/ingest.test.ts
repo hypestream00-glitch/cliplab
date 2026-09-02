@@ -43,7 +43,7 @@ describe("ingest url classification", () => {
 
   it("exposes provider capabilities without scattering platform checks", () => {
     const ids = listMediaImportProviders().map((provider) => provider.id);
-    expect(ids).toEqual(["YOUTUBE", "TWITCH", "KICK", "TIKTOK", "INSTAGRAM", "GOOGLE_DRIVE", "DIRECT_URL"]);
+    expect(ids).toEqual(["YOUTUBE", "TWITCH", "KICK", "TIKTOK", "INSTAGRAM", "BILIBILI", "GOOGLE_DRIVE", "DIRECT_URL"]);
     expect(getMediaImportProvider("DIRECT_URL").capabilities.directMedia).toBe(true);
     expect(getMediaImportProvider("DIRECT_URL").capabilities.import).toBe(true);
   });
@@ -114,7 +114,7 @@ describe("ingest preview", () => {
     expect(preview.creatorName).toBe("Canal");
     expect(preview.ingestSupported).toBe(false);
     expect(preview.availability).toBe("found-no-import");
-    expect(preview.message).toBe(ingestErrorMessage("import-unavailable"));
+    expect(preview.message).toBe("Envie o arquivo original para criar clips.");
   });
 
   it("does not claim an HTML page is a downloadable video", async () => {

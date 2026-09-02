@@ -1,8 +1,23 @@
 export const COMPETITION_PLATFORMS = ["TIKTOK", "INSTAGRAM", "YOUTUBE"] as const;
 export type CompetitionPlatform = (typeof COMPETITION_PLATFORMS)[number];
 
-export const TRENDING_PLATFORMS = ["YOUTUBE", "TWITCH", "KICK", "TIKTOK", "INSTAGRAM"] as const;
-export const TRENDING_CATEGORIES = ["Games", "Podcasts", "Entretenimento", "Esportes", "Notícias", "Outros"] as const;
+export const TRENDING_PLATFORMS = ["YOUTUBE", "TWITCH", "BILIBILI", "KICK", "TIKTOK", "INSTAGRAM"] as const;
+export const TRENDING_CATEGORIES = ["Games", "Podcasts", "Entretenimento", "Esportes", "Notícias", "Música", "Pessoas", "Outros"] as const;
+
+export const YOUTUBE_TRENDING_REGIONS = [
+  { id: "BR", label: "Brasil" },
+  { id: "US", label: "Estados Unidos" },
+  { id: "PT", label: "Portugal" },
+] as const;
+
+export const YOUTUBE_VIDEO_CATEGORIES = [
+  { id: "20", label: "Games", category: "Games" as const },
+  { id: "24", label: "Entertainment", category: "Entretenimento" as const },
+  { id: "17", label: "Sports", category: "Esportes" as const },
+  { id: "25", label: "News", category: "Notícias" as const },
+  { id: "10", label: "Music", category: "Música" as const },
+  { id: "22", label: "People", category: "Pessoas" as const },
+] as const;
 
 export function isAllowedCompetitionPlatform(value: string): value is CompetitionPlatform {
   return (COMPETITION_PLATFORMS as readonly string[]).includes(value);

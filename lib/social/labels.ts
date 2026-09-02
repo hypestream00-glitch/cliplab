@@ -13,6 +13,7 @@ const LABELS: Record<SocialPlatform, string> = {
   REDDIT: "Reddit",
   TWITCH: "Twitch",
   KICK: "Kick",
+  BILIBILI: "Bilibili",
 };
 
 export function socialPlatformLabel(platform: SocialPlatform | string) {

@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db/prisma";
 import { computeTrendScore } from "@/lib/trending/score";
 import { TRENDING_CATEGORIES, TRENDING_PLATFORMS } from "@/lib/competitions/platforms";
-import { isTwitchTrendingConfigured, isYouTubeTrendingConfigured } from "@/lib/trending/providers";
+import { isKickTrendingConfigured, isTwitchTrendingConfigured, isYouTubeTrendingConfigured } from "@/lib/trending/providers";
+import { resolvePlatformCapabilities } from "@/lib/platforms/capabilities";
 
 export { TRENDING_CATEGORIES, TRENDING_PLATFORMS };
 
@@ -9,12 +10,14 @@ export async function listTrendingItems(params: {
   platform?: string;
   category?: string;
   sort?: string;
+  region?: string;
 }) {
   const items = await prisma.trendingItem.findMany({
     where: {
       active: true,
       platform: params.platform && params.platform !== "ALL" ? params.platform : undefined,
       category: params.category && params.category !== "ALL" ? params.category : undefined,
+      region: params.region && params.region !== "ALL" && params.region !== "GLOBAL" ? params.region : undefined,
     },
     include: { scores: { orderBy: { computedAt: "desc" }, take: 1 } },
     take: 60,
@@ -26,6 +29,7 @@ export async function listTrendingItems(params: {
       views7d: item.views7d,
       engagement: item.engagement,
       publishedAt: item.publishedAt,
+      kind: item.kind,
     });
     return { ...item, trendScore: computed.score, trendInputs: computed.inputs };
   });
@@ -42,10 +46,12 @@ export async function listTrendingItems(params: {
 }
 
 export function trendingProviderAvailability(source: NodeJS.ProcessEnv = process.env) {
+  const caps = resolvePlatformCapabilities(source);
   return {
-    YOUTUBE: isYouTubeTrendingConfigured(source),
-    TWITCH: isTwitchTrendingConfigured(source),
-    KICK: false,
+    YOUTUBE: caps.YOUTUBE.trending === "AVAILABLE" && isYouTubeTrendingConfigured(source),
+    TWITCH: caps.TWITCH.trending === "AVAILABLE" && isTwitchTrendingConfigured(source),
+    BILIBILI: false,
+    KICK: caps.KICK.trending === "AVAILABLE" && isKickTrendingConfigured(source),
     TIKTOK: false,
     INSTAGRAM: false,
   } as const;
@@ -61,6 +67,7 @@ export async function persistTrendScores() {
       views7d: item.views7d,
       engagement: item.engagement,
       publishedAt: item.publishedAt,
+      kind: item.kind,
     });
     await prisma.trendingScore.create({
       data: {

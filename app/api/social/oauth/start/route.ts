@@ -15,6 +15,7 @@ import { TikTokApiError } from "@/lib/social/tiktok/http";
 import { MetaApiError } from "@/lib/social/meta/http";
 import { XApiError } from "@/lib/social/x/http";
 import { YouTubeApiError } from "@/lib/social/youtube/http";
+import { SocialApiError } from "@/lib/social/errors";
 import { limitAction } from "@/lib/security/action-limit";
 import { cookieSecure } from "@/lib/security/cookies";
 
@@ -45,6 +46,15 @@ export async function GET(request: Request) {
   if (platform === "YOUTUBE" && platformNeedsConfig("YOUTUBE")) {
     return NextResponse.redirect(new URL("/studio/accounts?error=youtube-config", request.url));
   }
+  if (platform === "TWITCH" && platformNeedsConfig("TWITCH")) {
+    return NextResponse.redirect(new URL("/studio/accounts?error=twitch-config", request.url));
+  }
+  if (platform === "KICK" && platformNeedsConfig("KICK")) {
+    return NextResponse.redirect(new URL("/studio/accounts?error=kick-config", request.url));
+  }
+  if (platform === "BILIBILI" && platformNeedsConfig("BILIBILI")) {
+    return NextResponse.redirect(new URL("/studio/accounts?error=bilibili-config", request.url));
+  }
 
   const redirectUri = oauthRedirectUri(platform);
   const issued = usesOfficialOAuth(platform)
@@ -69,7 +79,11 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     const message =
-      error instanceof TikTokApiError || error instanceof MetaApiError || error instanceof XApiError || error instanceof YouTubeApiError
+      error instanceof TikTokApiError ||
+      error instanceof MetaApiError ||
+      error instanceof XApiError ||
+      error instanceof YouTubeApiError ||
+      error instanceof SocialApiError
         ? error.code
         : "oauth";
     return NextResponse.redirect(new URL(`/studio/accounts?error=${encodeURIComponent(message)}`, request.url));

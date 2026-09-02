@@ -10,6 +10,14 @@ import { isXConfigured } from "@/lib/social/x/config";
 import { xProvider, unconfiguredXProvider } from "@/lib/social/x/provider";
 import { isYouTubeConfigured } from "@/lib/social/youtube/config";
 import { youtubeProvider, unconfiguredYouTubeProvider } from "@/lib/social/youtube/provider";
+import { isTwitchOAuthConfigured } from "@/lib/social/twitch/config";
+import { twitchOAuthProvider, unconfiguredTwitchProvider } from "@/lib/social/twitch/provider";
+import { isKickConfigured } from "@/lib/social/kick/config";
+import { kickOAuthProvider, unconfiguredKickProvider } from "@/lib/social/kick/provider";
+import { isBilibiliConfigured } from "@/lib/social/bilibili/config";
+import { bilibiliOAuthProvider, unconfiguredBilibiliProvider } from "@/lib/social/bilibili/provider";
+
+const OFFICIAL: SocialPlatform[] = ["TIKTOK", "INSTAGRAM", "FACEBOOK", "X", "YOUTUBE", "TWITCH", "KICK", "BILIBILI"];
 
 export function getSocialProvider(platform: SocialPlatform): SocialProvider {
   if (platform === "TIKTOK") {
@@ -27,15 +35,32 @@ export function getSocialProvider(platform: SocialPlatform): SocialProvider {
   if (platform === "YOUTUBE") {
     return isYouTubeConfigured() ? youtubeProvider : unconfiguredYouTubeProvider;
   }
+  if (platform === "TWITCH") {
+    return isTwitchOAuthConfigured() ? twitchOAuthProvider : unconfiguredTwitchProvider;
+  }
+  if (platform === "KICK") {
+    return isKickConfigured() ? kickOAuthProvider : unconfiguredKickProvider;
+  }
+  if (platform === "BILIBILI") {
+    return isBilibiliConfigured() ? bilibiliOAuthProvider : unconfiguredBilibiliProvider;
+  }
   return createMockSocialProvider(platform);
 }
 
 export function isSocialMocked(platform?: SocialPlatform) {
-  if (platform === "TIKTOK" || platform === "INSTAGRAM" || platform === "FACEBOOK" || platform === "X" || platform === "YOUTUBE") {
-    return false;
+  if (platform && OFFICIAL.includes(platform)) return false;
+  if (!platform) {
+    return (
+      !isTikTokConfigured() &&
+      !isMetaConfigured() &&
+      !isXConfigured() &&
+      !isYouTubeConfigured() &&
+      !isTwitchOAuthConfigured() &&
+      !isKickConfigured() &&
+      !isBilibiliConfigured()
+    );
   }
-  if (!platform) return !isTikTokConfigured() && !isMetaConfigured() && !isXConfigured() && !isYouTubeConfigured();
   return createMockSocialProvider(platform).mocked;
 }
 
-export type { SocialProvider, SocialProfile };
+export type { SocialProfile };

@@ -30,6 +30,7 @@ export function oauthCallbackCatalog() {
     { id: "meta", label: "Meta callback", url: oauthCallbackUrl("INSTAGRAM") },
     { id: "x", label: "X callback", url: oauthCallbackUrl("X") },
     { id: "google", label: "Google / YouTube callback", url: oauthCallbackUrl("YOUTUBE") },
+    { id: "generic", label: "Twitch / Kick / Bilibili callback", url: oauthCallbackUrl() },
   ] as const;
 }
 

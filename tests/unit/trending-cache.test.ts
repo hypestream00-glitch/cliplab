@@ -12,12 +12,12 @@ vi.mock("@/lib/queue/redis", () => ({
 import { readTrendingCache, writeTrendingCache, youtubeTrendingCacheKey } from "@/lib/trending/cache";
 
 describe("trending redis cache", () => {
-  it("uses trending:youtube:BR and a TTL", async () => {
-    expect(youtubeTrendingCacheKey("br")).toBe("trending:youtube:BR");
-    await writeTrendingCache("trending:youtube:BR", { platform: "YOUTUBE", available: true, items: [] });
-    expect(redis.set).toHaveBeenCalledWith("trending:youtube:BR", expect.any(String), "EX", 1800);
+  it("uses trending:youtube:BR:all:popular and a TTL", async () => {
+    expect(youtubeTrendingCacheKey("br")).toBe("trending:youtube:BR:all:popular");
+    await writeTrendingCache("trending:youtube:BR:all:popular", { platform: "YOUTUBE", available: true, items: [] });
+    expect(redis.set).toHaveBeenCalledWith("trending:youtube:BR:all:popular", expect.any(String), "EX", 1800);
     redis.get.mockResolvedValueOnce(JSON.stringify({ platform: "YOUTUBE", available: true, items: [] }));
-    const cached = await readTrendingCache<{ platform: string }>("trending:youtube:BR");
+    const cached = await readTrendingCache<{ platform: string }>("trending:youtube:BR:all:popular");
     expect(cached?.platform).toBe("YOUTUBE");
   });
 });

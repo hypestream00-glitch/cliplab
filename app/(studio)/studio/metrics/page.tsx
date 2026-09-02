@@ -17,12 +17,17 @@ export default async function MetricsPage({ searchParams }: PageSearchProps) {
   const { workspace } = await requireWorkspaceContext();
   const params = await searchParams;
   const range = typeof params.range === "string" ? params.range : "30";
+  const platform = typeof params.platform === "string" ? params.platform : "ALL";
   const days = Number(range) || 30;
   const since = daysAgo(days);
 
   const [snapshots, publishedCount, cliplabViews, accounts, postingRows] = await Promise.all([
     prisma.socialMetricSnapshot.findMany({
-      where: { ...visibleMetricSnapshotWhere(workspace.id), capturedAt: { gte: since } },
+      where: {
+        ...visibleMetricSnapshotWhere(workspace.id),
+        capturedAt: { gte: since },
+        ...(platform !== "ALL" ? { socialAccount: { platform: platform as never } } : {}),
+      },
       orderBy: { capturedAt: "asc" },
     }),
     prisma.socialPublication.count({
@@ -30,7 +35,10 @@ export default async function MetricsPage({ searchParams }: PageSearchProps) {
     }),
     getCliplabPublishedViews(workspace.id),
     prisma.socialAccount.findMany({
-      where: visibleSocialAccountWhere(workspace.id),
+      where: {
+        ...visibleSocialAccountWhere(workspace.id),
+        ...(platform !== "ALL" ? { platform: platform as never } : {}),
+      },
       include: { metricSnaps: { orderBy: { capturedAt: "desc" }, take: 1 } },
     }),
     prisma.socialPublicationTarget.findMany({
@@ -73,13 +81,27 @@ export default async function MetricsPage({ searchParams }: PageSearchProps) {
           Conteúdo
         </Link>
       </nav>
-      <form className="my-4 flex gap-2 text-[13px]">
+      <form className="my-4 flex flex-wrap gap-2 text-[13px]">
         {["7", "30", "90"].map((value) => (
-          <Link key={value} href={`/studio/analytics?range=${value}`} className={`filter-chip ${range === value ? "filter-chip-active" : ""}`}>
+          <Link key={value} href={`/studio/analytics?range=${value}&platform=${platform}`} className={`filter-chip ${range === value ? "filter-chip-active" : ""}`}>
             {value} dias
           </Link>
         ))}
       </form>
+      <div className="mb-4 flex flex-wrap gap-2 text-[13px]">
+        {["ALL", "TWITCH", "YOUTUBE", "BILIBILI", "TIKTOK", "INSTAGRAM", "KICK"].map((item) => (
+          <Link
+            key={item}
+            href={`/studio/analytics?range=${range}&platform=${item}`}
+            className={`filter-chip ${platform === item ? "filter-chip-active" : ""}`}
+          >
+            {item === "ALL" ? "Todas" : item === "BILIBILI" ? "Bilibili" : item.charAt(0) + item.slice(1).toLowerCase()}
+          </Link>
+        ))}
+      </div>
+      <p className="mb-4 text-[12px] text-muted-foreground">
+        Métricas de plataformas diferentes não são somadas automaticamente. Views de vídeo e viewers de live não são comparáveis.
+      </p>
 
       <section className="mt-2">
         <h2 className="mb-2 text-[15px] font-semibold tracking-tight">Analytics do conteúdo CortaClip</h2>

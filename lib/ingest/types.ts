@@ -1,7 +1,7 @@
 import type { SourceKind } from "@/generated/prisma/client";
 import type { HostLookup } from "@/lib/security/ssrf";
 
-export type IngestProvider = "YOUTUBE" | "TWITCH" | "KICK" | "TIKTOK" | "INSTAGRAM" | "GOOGLE_DRIVE" | "DIRECT_URL";
+export type IngestProvider = "YOUTUBE" | "TWITCH" | "KICK" | "TIKTOK" | "INSTAGRAM" | "BILIBILI" | "GOOGLE_DRIVE" | "DIRECT_URL";
 
 export type ClassifiedIngestUrl = {
   provider: IngestProvider;

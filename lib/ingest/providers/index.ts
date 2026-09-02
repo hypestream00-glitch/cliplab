@@ -5,6 +5,7 @@ import { kickProvider } from "@/lib/ingest/providers/kick";
 import { tiktokProvider } from "@/lib/ingest/providers/tiktok";
 import { twitchProvider } from "@/lib/ingest/providers/twitch";
 import { youtubeProvider } from "@/lib/ingest/providers/youtube";
+import { bilibiliIngestProvider } from "@/lib/ingest/providers/bilibili";
 import type { ClassifiedIngestUrl, IngestProvider, MediaImportProvider } from "@/lib/ingest/types";
 import { parseIngestUrl } from "@/lib/ingest/url";
 
@@ -14,6 +15,7 @@ const PROVIDERS: MediaImportProvider[] = [
   kickProvider,
   tiktokProvider,
   instagramProvider,
+  bilibiliIngestProvider,
   googleDriveProvider,
   directUrlProvider,
 ];

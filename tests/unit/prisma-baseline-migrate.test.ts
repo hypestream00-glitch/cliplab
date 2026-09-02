@@ -19,6 +19,7 @@ const PROMO_MIGRATION = "20260901210000_promo_and_referral";
 const COMPETITIONS_MIGRATION = "20260901220000_competitions_and_trending";
 const AFFILIATE_MIGRATION = "20260901230000_affiliate_wallet";
 const PARTICIPANT_CODE_MIGRATION = "20260901240000_participant_codes";
+const MULTI_PLATFORM_MIGRATION = "20260901250000_multi_platform_capabilities";
 const ALL_MIGRATIONS = [
   FIRST_MIGRATION,
   RECONCILE_MIGRATION,
@@ -26,6 +27,7 @@ const ALL_MIGRATIONS = [
   COMPETITIONS_MIGRATION,
   AFFILIATE_MIGRATION,
   PARTICIPANT_CODE_MIGRATION,
+  MULTI_PLATFORM_MIGRATION,
 ];
 const FIRST_SQL = readFileSync(path.resolve("prisma/migrations", FIRST_MIGRATION, "migration.sql"), "utf8");
 const SCHEMA = readFileSync(path.resolve("prisma/schema.prisma"), "utf8");

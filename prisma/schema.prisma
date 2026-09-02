@@ -97,6 +97,7 @@ enum SocialPlatform {
   TWITCH
   KICK
   REDDIT
+  BILIBILI
 }
 
 enum SocialAccountStatus {
@@ -1747,6 +1748,8 @@ model TrendingItem {
   publishedAt     DateTime?
   source          String
   projectId       String?
+  region          String?
+  kind            String?
   active          Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -1754,6 +1757,7 @@ model TrendingItem {
 
   @@index([active, platform, category])
   @@index([publishedAt])
+  @@index([platform, region, kind])
 }
 
 model TrendingScore {

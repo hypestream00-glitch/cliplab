@@ -2,7 +2,14 @@ import { prisma } from "@/lib/db/prisma";
 import { computeTrendScore } from "@/lib/trending/score";
 import { fetchYouTubeTrending } from "@/lib/trending/youtube";
 import { fetchTwitchPopular, unsupportedTrending } from "@/lib/trending/twitch";
-import { readTrendingCache, writeTrendingCache, youtubeTrendingCacheKey, twitchTrendingCacheKey } from "@/lib/trending/cache";
+import { fetchKickPopular } from "@/lib/trending/kick";
+import {
+  readTrendingCache,
+  writeTrendingCache,
+  youtubeTrendingCacheKey,
+  twitchTrendingCacheKey,
+  kickTrendingCacheKey,
+} from "@/lib/trending/cache";
 import {
   trendingFetchDepsFromEnv,
   type TrendingFetchDeps,
@@ -23,22 +30,31 @@ function reviveProviderResult(result: TrendingProviderResult): TrendingProviderR
 
 export async function collectTrendingProviders(deps: TrendingFetchDeps = trendingFetchDepsFromEnv()) {
   const region = deps.region || "BR";
-  const youtubeKey = youtubeTrendingCacheKey(region);
+  const category = deps.youtubeCategoryId?.trim() || "all";
+  const youtubeKey = youtubeTrendingCacheKey(region, category);
   const twitchKey = twitchTrendingCacheKey();
+  const kickKey = kickTrendingCacheKey();
   const cachedYoutube = await readTrendingCache<TrendingProviderResult>(youtubeKey);
   const cachedTwitch = await readTrendingCache<TrendingProviderResult>(twitchKey);
+  const cachedKick = await readTrendingCache<TrendingProviderResult>(kickKey);
   const youtube = cachedYoutube ? reviveProviderResult(cachedYoutube) : await fetchYouTubeTrending(deps);
   if (!cachedYoutube && youtube.available) await writeTrendingCache(youtubeKey, youtube);
   const twitch = cachedTwitch ? reviveProviderResult(cachedTwitch) : await fetchTwitchPopular(deps);
   if (!cachedTwitch && twitch.available) await writeTrendingCache(twitchKey, twitch);
-  return [youtube, twitch, unsupportedTrending("KICK"), unsupportedTrending("TIKTOK"), unsupportedTrending("INSTAGRAM")];
+  const kick = cachedKick ? reviveProviderResult(cachedKick) : await fetchKickPopular(deps);
+  if (!cachedKick && kick.available) await writeTrendingCache(kickKey, kick);
+  return [youtube, twitch, kick, unsupportedTrending("BILIBILI"), unsupportedTrending("TIKTOK"), unsupportedTrending("INSTAGRAM")];
 }
 
 export async function persistTrendingItems(items: TrendingProviderItem[], source: string) {
   const now = new Date();
   for (const item of items) {
     const existing = await prisma.trendingItem.findFirst({
-      where: { platform: item.platform, externalId: item.externalId },
+      where: {
+        platform: item.platform,
+        externalId: item.externalId,
+        ...(item.region ? { region: item.region } : {}),
+      },
     });
     let views24h: number | null = null;
     if (existing?.viewCount != null && item.viewCount != null && now.getTime() - existing.updatedAt.getTime() < 36 * 3_600_000) {
@@ -58,6 +74,8 @@ export async function persistTrendingItems(items: TrendingProviderItem[], source
       engagement: item.engagement ?? null,
       publishedAt: item.publishedAt ?? null,
       source,
+      region: item.region ?? null,
+      kind: item.kind ?? (item.platform === "TWITCH" || item.platform === "KICK" ? "live" : "content"),
       active: true,
     };
     const saved = existing
@@ -68,6 +86,7 @@ export async function persistTrendingItems(items: TrendingProviderItem[], source
       views24h: saved.views24h,
       engagement: saved.engagement,
       publishedAt: saved.publishedAt,
+      kind: saved.kind,
     });
     await prisma.trendingScore.create({
       data: {
@@ -81,8 +100,15 @@ export async function persistTrendingItems(items: TrendingProviderItem[], source
   if (items.length) {
     const platform = items[0].platform;
     const ids = items.map((item) => item.externalId);
+    const region = items[0].region;
     await prisma.trendingItem.updateMany({
-      where: { platform, source, active: true, externalId: { notIn: ids } },
+      where: {
+        platform,
+        source,
+        active: true,
+        externalId: { notIn: ids },
+        ...(region ? { region } : {}),
+      },
       data: { active: false },
     });
   }

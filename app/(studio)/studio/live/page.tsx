@@ -39,7 +39,9 @@ export default async function LivePage({ searchParams }: PageSearchProps) {
         <p>
           Twitch: {twitchReady ? "status ao vivo via Helix quando o monitoramento está ativo." : "credenciais Helix ausentes — o canal fica registrado, sem status real."}
         </p>
-        <p>Kick e YouTube: cadastro e regras salvos. Status oficial de live ainda não está disponível nestas APIs neste produto.</p>
+        <p>YouTube: status de live via Data API v3 (eventType=live) quando YOUTUBE_API_KEY estiver definida. Sem download da transmissão.</p>
+        <p>Kick: status ao vivo via Public API v1/channels quando KICK_CLIENT_ID/SECRET estiverem definidos. Sem ingestão de stream.</p>
+        <p>Bilibili: cadastro de live ainda não disponível pela Open Platform neste produto.</p>
         <p>Auto-publicação permanece desligada até consentimento explícito. Nenhum clip é gerado automaticamente a partir da live nesta versão.</p>
       </div>
       {!allowed ? (

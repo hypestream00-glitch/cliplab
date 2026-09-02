@@ -85,7 +85,7 @@ async function previewYouTube(classified: ClassifiedIngestUrl, ctx: MediaImportC
       durationSeconds,
       ingestSupported: false,
       availability: "found-no-import",
-      message: ingestErrorMessage("import-unavailable"),
+      message: "Envie o arquivo original para criar clips.",
     };
   } catch (error) {
     if (error instanceof IngestError) throw error;

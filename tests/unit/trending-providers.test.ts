@@ -57,11 +57,13 @@ describe("youtube trending provider", () => {
 });
 
 describe("trending provider collection", () => {
-  it("keeps kick/tiktok/instagram as unavailable sources", () => {
-    expect(unsupportedTrending("KICK").available).toBe(false);
+  it("keeps tiktok/instagram/bilibili as unavailable public trending sources", () => {
+    expect(unsupportedTrending("TIKTOK").available).toBe(false);
     expect(unsupportedTrending("TIKTOK").reason).toBe("Fonte ainda não disponível");
+    expect(unsupportedTrending("BILIBILI").available).toBe(false);
     expect(mapYouTubeCategory("25")).toBe("Notícias");
-    expect(youtubeTrendingCacheKey("BR")).toBe("trending:youtube:BR");
+    expect(mapYouTubeCategory("10")).toBe("Música");
+    expect(youtubeTrendingCacheKey("BR")).toBe("trending:youtube:BR:all:popular");
     expect(twitchTrendingCacheKey()).toBe("trending:twitch:popular");
   });
 

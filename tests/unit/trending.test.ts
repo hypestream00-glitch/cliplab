@@ -35,7 +35,7 @@ describe("trending page and filters", () => {
     expect(page).toContain("Fonte ainda não disponível");
     expect(page).toContain("Conecte uma fonte de tendências");
     expect(page).not.toContain("scrape");
-    expect(TRENDING_PLATFORMS).toEqual(["YOUTUBE", "TWITCH", "KICK", "TIKTOK", "INSTAGRAM"]);
+    expect(TRENDING_PLATFORMS).toEqual(["YOUTUBE", "TWITCH", "BILIBILI", "KICK", "TIKTOK", "INSTAGRAM"]);
     expect(TRENDING_CATEGORIES).toContain("Games");
   });
 

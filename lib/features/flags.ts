@@ -18,7 +18,12 @@ export type FeatureFlag =
   | "ENABLE_TRENDING_YOUTUBE"
   | "ENABLE_TRENDING_TWITCH"
   | "ENABLE_CHAMPIONSHIPS"
-  | "ENABLE_AUTOPOST";
+  | "ENABLE_AUTOPOST"
+  | "ENABLE_YOUTUBE"
+  | "ENABLE_BILIBILI"
+  | "ENABLE_TIKTOK"
+  | "ENABLE_INSTAGRAM"
+  | "ENABLE_KICK";
 
 export function featureFlags(): Record<FeatureFlag, boolean> {
   const unified = isUploadPostPrimary() && isUploadPostConfigured();
@@ -40,6 +45,11 @@ export function featureFlags(): Record<FeatureFlag, boolean> {
     ENABLE_TRENDING_TWITCH: envPresent("TWITCH_CLIENT_ID") && envPresent("TWITCH_CLIENT_SECRET"),
     ENABLE_CHAMPIONSHIPS: envFlagOrDefault("ENABLE_CHAMPIONSHIPS", true),
     ENABLE_AUTOPOST: envFlagOrDefault("ENABLE_AUTOPOST", true) && socialPublishAllowed(),
+    ENABLE_YOUTUBE: envFlagOrDefault("ENABLE_YOUTUBE", true),
+    ENABLE_BILIBILI: envFlagOrDefault("ENABLE_BILIBILI", true),
+    ENABLE_TIKTOK: envFlagOrDefault("ENABLE_TIKTOK", true),
+    ENABLE_INSTAGRAM: envFlagOrDefault("ENABLE_INSTAGRAM", true),
+    ENABLE_KICK: envFlagOrDefault("ENABLE_KICK", true),
   };
 }
 

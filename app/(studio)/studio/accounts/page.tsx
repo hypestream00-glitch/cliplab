@@ -13,7 +13,7 @@ import {
   syncXAccountAction,
   syncYouTubeAccountAction,
 } from "@/app/(studio)/studio/accounts/actions";
-import { DisconnectAccountButton, MetaConfigNotice, TikTokConfigNotice, XConfigNotice, YouTubeConfigNotice } from "@/components/accounts/tiktok-account-actions";
+import { DisconnectAccountButton, MetaConfigNotice, TikTokConfigNotice, XConfigNotice, YouTubeConfigNotice, TwitchConfigNotice, KickConfigNotice, BilibiliConfigNotice } from "@/components/accounts/tiktok-account-actions";
 import { ConnectSuccessToast } from "@/components/accounts/connect-success-toast";
 import { platformNeedsConfig } from "@/lib/social/oauth";
 import { tiktokContentPostingStatus, tiktokOAuthStatus } from "@/lib/social/tiktok/config";
@@ -30,6 +30,14 @@ import { ensureUploadPostProfile } from "@/lib/social/upload-post/profiles";
 import { syncUploadPostAccounts } from "@/lib/social/upload-post/accounts";
 import { UploadPostPlanError } from "@/lib/social/upload-post/errors";
 import { visibleSocialAccountWhere } from "@/lib/data/visibility";
+import {
+  CAPABILITY_LABELS,
+  ECOSYSTEM_PLATFORMS,
+  getPlatformCapabilities,
+  type EcosystemPlatform,
+} from "@/lib/platforms/capabilities";
+import { PlatformCapabilityBadge } from "@/components/platforms/capability-badge";
+import { socialPlatformLabel } from "@/lib/social/labels";
 
 const PLATFORMS = getSupportedPlatforms();
 
@@ -45,6 +53,9 @@ const ERRORS: Record<string, string> = {
   "meta-config": "Configure META_APP_ID e META_APP_SECRET no servidor.",
   "x-config": "Configure X_CLIENT_ID e X_CLIENT_SECRET no servidor.",
   "youtube-config": "Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET (ou AUTH_GOOGLE_*) no servidor.",
+  "twitch-config": "Configure TWITCH_CLIENT_ID e TWITCH_CLIENT_SECRET no servidor.",
+  "kick-config": "Configure KICK_CLIENT_ID e KICK_CLIENT_SECRET no servidor.",
+  "bilibili-config": "Configure BILIBILI_CLIENT_ID e BILIBILI_CLIENT_SECRET no servidor.",
   "oauth-state": "State OAuth inválido ou expirado. Tente conectar de novo.",
   "oauth-denied": "Autorização recusada.",
   not_configured: "A integração ainda não está configurada.",
@@ -143,6 +154,14 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
                 <p className="mt-2 text-[11px] text-muted-foreground">
                   {capabilities.canPublishVideo ? "Publicação de vídeo" : "Sem publicação de vídeo"}
                 </p>
+                {ECOSYSTEM_PLATFORMS.includes(platform as EcosystemPlatform) ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {(["trending", "postMetrics", "competitionTracking", "publish"] as const).map((key) => {
+                      const state = getPlatformCapabilities(platform as EcosystemPlatform)[key];
+                      return <PlatformCapabilityBadge key={key} state={state} label={CAPABILITY_LABELS[key]} />;
+                    })}
+                  </div>
+                ) : null}
                 <div className="mt-3 space-y-3">
                   {platformAccounts.map((account) => {
                     const status = accountDisplayStatus(account);
@@ -191,6 +210,68 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
             );
           })}
         </div>
+        <h2 className="mt-8 mb-3 text-[14px] font-semibold">Plataformas nativas</h2>
+        <p className="mb-3 text-[12px] text-muted-foreground">
+          Twitch, Kick e Bilibili usam OAuth oficial separado do Upload-Post. Tokens ficam só no servidor.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {(["TWITCH", "KICK", "BILIBILI"] as const).map((platform) => {
+            const platformAccounts = accounts.filter((account) => account.platform === platform);
+            const caps = getPlatformCapabilities(platform);
+            const needs = platformNeedsConfig(platform);
+            return (
+              <article key={platform} id={platform.toLowerCase()} className="rounded-2xl border border-border bg-card p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[13px] font-semibold">{socialPlatformLabel(platform)}</p>
+                    {platformAccounts.length === 0 ? (
+                      <p className="text-[12px] text-muted-foreground">{needs ? "Aguardando credenciais" : "Não conectada"}</p>
+                    ) : (
+                      <p className="text-[12px] text-muted-foreground">
+                        {platformAccounts.length} conta{platformAccounts.length > 1 ? "s" : ""}
+                      </p>
+                    )}
+                  </div>
+                  {platformAccounts.length === 0 ? <StatusBadge status="OFFLINE" /> : null}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {(["trending", "oauth", "live", "publish", "competitionTracking"] as const).map((key) => (
+                    <PlatformCapabilityBadge key={key} state={caps[key]} label={CAPABILITY_LABELS[key]} />
+                  ))}
+                </div>
+                <div className="mt-3 space-y-3">
+                  {platformAccounts.map((account) => (
+                    <div key={account.id} className="rounded-md border px-2.5 py-2">
+                      <p className="text-[12px] font-medium">{account.displayName}</p>
+                      <p className="text-[11px] text-muted-foreground">@{account.username}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/api/social/oauth/start?platform=${platform}`}>Reconectar</Link>
+                        </Button>
+                        <DisconnectAccountButton accountId={account.id} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3">
+                  {needs ? (
+                    platform === "TWITCH" ? (
+                      <TwitchConfigNotice />
+                    ) : platform === "KICK" ? (
+                      <KickConfigNotice />
+                    ) : (
+                      <BilibiliConfigNotice />
+                    )
+                  ) : (
+                    <Button size="sm" asChild>
+                      <Link href={`/api/social/oauth/start?platform=${platform}`}>Conectar {socialPlatformLabel(platform)}</Link>
+                    </Button>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -199,6 +280,10 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
   const metaNeedsConfig = platformNeedsConfig("INSTAGRAM");
   const xNeedsConfig = platformNeedsConfig("X");
   const youtubeNeedsConfig = platformNeedsConfig("YOUTUBE");
+  const twitchNeedsConfig = platformNeedsConfig("TWITCH");
+  const kickNeedsConfig = platformNeedsConfig("KICK");
+  const bilibiliNeedsConfig = platformNeedsConfig("BILIBILI");
+  const nativePlatforms = Array.from(new Set([...PLATFORMS, ...ECOSYSTEM_PLATFORMS]));
 
   return (
     <div>
@@ -225,20 +310,26 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
         <EmptyState title="Nenhuma conta conectada." description="Conecte TikTok, Instagram ou Facebook via OAuth oficial." actionLabel="Ver Instagram" actionHref="/studio/accounts#instagram" />
       ) : null}
       <div id="connect" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {PLATFORMS.map((platform) => {
+        {nativePlatforms.map((platform) => {
           const platformAccounts = accounts.filter((account) => account.platform === platform);
           const capabilities = PLATFORM_CAPABILITIES[platform];
           const needsConfig =
             (platform === "TIKTOK" && tiktokNeedsConfig) ||
             ((platform === "INSTAGRAM" || platform === "FACEBOOK") && metaNeedsConfig) ||
             (platform === "X" && xNeedsConfig) ||
-            (platform === "YOUTUBE" && youtubeNeedsConfig);
+            (platform === "YOUTUBE" && youtubeNeedsConfig) ||
+            (platform === "TWITCH" && twitchNeedsConfig) ||
+            (platform === "KICK" && kickNeedsConfig) ||
+            (platform === "BILIBILI" && bilibiliNeedsConfig);
           const official =
             platform === "TIKTOK" ||
             platform === "INSTAGRAM" ||
             platform === "FACEBOOK" ||
             platform === "X" ||
-            platform === "YOUTUBE";
+            platform === "YOUTUBE" ||
+            platform === "TWITCH" ||
+            platform === "KICK" ||
+            platform === "BILIBILI";
           return (
             <article
               key={platform}
@@ -367,6 +458,12 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
                   <XConfigNotice />
                 ) : platform === "YOUTUBE" && youtubeNeedsConfig ? (
                   <YouTubeConfigNotice />
+                ) : platform === "TWITCH" && twitchNeedsConfig ? (
+                  <TwitchConfigNotice />
+                ) : platform === "KICK" && kickNeedsConfig ? (
+                  <KickConfigNotice />
+                ) : platform === "BILIBILI" && bilibiliNeedsConfig ? (
+                  <BilibiliConfigNotice />
                 ) : official ? (
                   <Button size="sm" asChild>
                     <Link href={`/api/social/oauth/start?platform=${platform}`}>

@@ -43,6 +43,57 @@ export function TikTokConfigNotice() {
   );
 }
 
+export function TwitchConfigNotice() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <Button size="sm" variant="outline" type="button" onClick={() => setOpen((value) => !value)}>
+        Conectar Twitch
+      </Button>
+      {open ? (
+        <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-100">
+          Twitch: configuração necessária. Defina TWITCH_CLIENT_ID e TWITCH_CLIENT_SECRET. Callback:
+          /api/social/oauth/callback. CortaClip não pede senha da Twitch.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function KickConfigNotice() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <Button size="sm" variant="outline" type="button" onClick={() => setOpen((value) => !value)}>
+        Conectar Kick
+      </Button>
+      {open ? (
+        <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-100">
+          Kick: configuração necessária. Defina KICK_CLIENT_ID e KICK_CLIENT_SECRET no servidor (OAuth 2.1 + PKCE).
+          CortaClip não usa endpoints internos do Kick.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function BilibiliConfigNotice() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <Button size="sm" variant="outline" type="button" onClick={() => setOpen((value) => !value)}>
+        Conectar Bilibili
+      </Button>
+      {open ? (
+        <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-100">
+          Bilibili: configuração necessária. Defina BILIBILI_CLIENT_ID e BILIBILI_CLIENT_SECRET da Open Platform
+          (open.bilibili.com). Publicação permanece desligada até aprovação.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function YouTubeConfigNotice() {
   const [open, setOpen] = useState(false);
   return (

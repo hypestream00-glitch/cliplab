@@ -21,6 +21,8 @@ export function providerLabel(provider: IngestProvider) {
       return "TikTok";
     case "INSTAGRAM":
       return "Instagram";
+    case "BILIBILI":
+      return "Bilibili";
     case "GOOGLE_DRIVE":
       return "Google Drive";
     default:

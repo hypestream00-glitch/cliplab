@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { requireWorkspaceContext } from "@/lib/auth/session";
 import { listTrendingItems, trendingProviderAvailability } from "@/lib/trending/query";
-import { TRENDING_CATEGORIES, TRENDING_PLATFORMS } from "@/lib/competitions/platforms";
+import { TRENDING_CATEGORIES, TRENDING_PLATFORMS, YOUTUBE_TRENDING_REGIONS } from "@/lib/competitions/platforms";
 import { formatNumber, formatDate, formatDuration } from "@/lib/utils/format";
 import { TrendingHeroArt } from "@/components/trending/hero-art";
 import { classifyIngestUrl } from "@/lib/ingest/classify";
+import { resolvePlatformCapabilities, trendingUnavailableReason, type EcosystemPlatform } from "@/lib/platforms/capabilities";
+import { PlatformLimitedBadge } from "@/components/platforms/capability-badge";
 import type { PageSearchProps } from "@/types/routes";
 
 export const metadata = { title: "Em alta" };
@@ -13,10 +15,16 @@ const PLATFORM_LABEL: Record<string, string> = {
   ALL: "Todos",
   YOUTUBE: "YouTube",
   TWITCH: "Twitch",
+  BILIBILI: "Bilibili",
   KICK: "Kick",
   TIKTOK: "TikTok",
   INSTAGRAM: "Instagram",
 };
+
+function metricLabel(platform: string, kind?: string | null) {
+  if (kind === "live" || platform === "TWITCH" || platform === "KICK") return "viewers atuais";
+  return "views";
+}
 
 export default async function TrendingPage({ searchParams }: PageSearchProps) {
   const { user } = await requireWorkspaceContext();
@@ -24,16 +32,24 @@ export default async function TrendingPage({ searchParams }: PageSearchProps) {
   const platform = typeof params.platform === "string" ? params.platform : "ALL";
   const category = typeof params.category === "string" ? params.category : "ALL";
   const sort = typeof params.sort === "string" ? params.sort : "hot";
-  const items = await listTrendingItems({ platform, category, sort });
+  const region = typeof params.region === "string" ? params.region : "BR";
+  const items = await listTrendingItems({
+    platform,
+    category,
+    sort,
+    region: platform === "YOUTUBE" || platform === "ALL" ? region : undefined,
+  });
   const availability = trendingProviderAvailability();
-  const anySource = availability.YOUTUBE || availability.TWITCH;
+  const capabilities = resolvePlatformCapabilities();
+  const anySource = availability.YOUTUBE || availability.TWITCH || availability.KICK;
   const isAdmin = user?.role === "SUPER_ADMIN";
   const href = (next: Record<string, string>) => {
-    const search = new URLSearchParams({ platform, category, sort, ...next });
+    const search = new URLSearchParams({ platform, category, sort, region, ...next });
     return `/studio/trending?${search.toString()}`;
   };
   const selectedUnavailable =
     platform !== "ALL" && platform in availability && !availability[platform as keyof typeof availability];
+  const showYoutubeRegions = platform === "YOUTUBE" || platform === "ALL";
 
   return (
     <div>
@@ -58,11 +74,26 @@ export default async function TrendingPage({ searchParams }: PageSearchProps) {
         <div>
           <p className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-text-secondary uppercase">Plataforma</p>
           <div className="flex flex-wrap gap-2">
-            {["ALL", ...TRENDING_PLATFORMS].map((item) => (
-              <Link key={item} href={href({ platform: item })} className={`filter-chip ${platform === item ? "filter-chip-active" : ""}`}>
-                {PLATFORM_LABEL[item] ?? item}
-              </Link>
-            ))}
+            {["ALL", ...TRENDING_PLATFORMS].map((item) => {
+              const limited =
+                item !== "ALL" &&
+                item in availability &&
+                !availability[item as keyof typeof availability];
+              return (
+                <Link
+                  key={item}
+                  href={href({ platform: item })}
+                  className={`filter-chip ${platform === item ? "filter-chip-active" : ""} ${limited ? "opacity-70" : ""}`}
+                >
+                  {PLATFORM_LABEL[item] ?? item}
+                  {limited ? (
+                    <span className="ml-1">
+                      <PlatformLimitedBadge title={trendingUnavailableReason(item as EcosystemPlatform)} />
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            })}
           </div>
         </div>
         <div>
@@ -93,8 +124,33 @@ export default async function TrendingPage({ searchParams }: PageSearchProps) {
         </div>
       </div>
 
+      {showYoutubeRegions ? (
+        <div className="mb-6">
+          <p className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-text-secondary uppercase">Região YouTube</p>
+          <div className="flex flex-wrap gap-2">
+            {YOUTUBE_TRENDING_REGIONS.map((item) => (
+              <Link key={item.id} href={href({ region: item.id })} className={`filter-chip ${region === item.id ? "filter-chip-active" : ""}`}>
+                {item.label}
+              </Link>
+            ))}
+            <span
+              title="YouTube mostPopular exige regionCode. Global não é oferecido pela Data API v3."
+              className="filter-chip cursor-not-allowed opacity-50"
+            >
+              Global
+            </span>
+          </div>
+        </div>
+      ) : null}
+
       {selectedUnavailable ? (
-        <p className="mb-6 rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3 text-[13px] text-gold">Fonte ainda não disponível</p>
+        <p className="mb-6 rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3 text-[13px] text-gold">
+          {platform === "BILIBILI"
+            ? "Dados de tendências indisponíveis via API oficial."
+            : platform === "YOUTUBE" && capabilities.YOUTUBE.trending !== "AVAILABLE"
+              ? "Recurso ainda não disponível para esta plataforma."
+              : "Fonte ainda não disponível"}
+        </p>
       ) : null}
 
       {items.length === 0 ? (
@@ -115,6 +171,7 @@ export default async function TrendingPage({ searchParams }: PageSearchProps) {
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {items.map((item) => {
             const ingest = item.canonicalUrl ? classifyIngestUrl(item.canonicalUrl) : null;
+            const metric = metricLabel(item.platform, item.kind);
             return (
               <article
                 key={item.id}
@@ -140,7 +197,7 @@ export default async function TrendingPage({ searchParams }: PageSearchProps) {
                   <h2 className="line-clamp-2 text-[15px] font-semibold text-white">{item.title}</h2>
                   <p className="mt-1.5 text-[13px] text-text-secondary">{item.creatorName ?? "Criador indisponível"}</p>
                   <p className="mt-2 text-[12px] text-text-secondary">
-                    {item.viewCount != null ? `${formatNumber(item.viewCount)} views` : "Views indisponíveis"}
+                    {item.viewCount != null ? `${formatNumber(item.viewCount)} ${metric}` : `${metric} indisponíveis`}
                     {item.publishedAt ? ` · ${formatDate(item.publishedAt)}` : ""}
                     {item.durationSeconds != null ? ` · ${formatDuration(item.durationSeconds * 1000)}` : ""}
                   </p>
@@ -164,7 +221,7 @@ export default async function TrendingPage({ searchParams }: PageSearchProps) {
                             : "inline-flex h-9 items-center rounded-xl border border-magenta/40 px-3 text-[12px] text-white hover:bg-magenta/10"
                         }
                       >
-                        ✨ Criar clips
+                        {ingest?.ingestSupported ? "✨ Criar clips" : "Enviar arquivo original"}
                       </Link>
                     ) : (
                       <p className="text-[12px] text-text-secondary">Usar como referência. Importação automática desta fonte ainda não é suportada.</p>
