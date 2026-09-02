@@ -14,7 +14,7 @@ import { getSocialProvider } from "@/lib/social";
 import { oauthRedirectUri } from "@/lib/social/oauth";
 import { isYouTubeConfigured, youtubeClientId, youtubeRedirectUri } from "@/lib/social/youtube/config";
 import { LOG_REDACT_PATHS } from "@/lib/logger";
-import { firstEnvValue } from "@/lib/env/status";
+import { firstRuntimeEnv, runtimeEnv } from "@/lib/env/runtime";
 import { accountsErrorPath } from "@/lib/env/app-url";
 import { assertUploadPostAccessUrl } from "@/lib/social/upload-post/connect";
 
@@ -104,16 +104,20 @@ describe("studio accounts connect routing", () => {
     expect(() => assertUploadPostAccessUrl("https://app.upload-post.com/connect")).toThrow(/token/);
   });
 
-  it("reads Google OAuth client id at runtime via dynamic env keys", () => {
+  it("reads Google OAuth client id at runtime via runtimeEnv, not build-time process.env.NAME", () => {
     vi.stubEnv("GOOGLE_CLIENT_ID", " runtime-google-id ");
     vi.stubEnv("GOOGLE_CLIENT_SECRET", "runtime-secret");
-    expect(firstEnvValue(["GOOGLE_CLIENT_ID", "YOUTUBE_CLIENT_ID"])).toBe("runtime-google-id");
+    expect(runtimeEnv("GOOGLE_CLIENT_ID")).toBe("runtime-google-id");
+    expect(firstRuntimeEnv(["GOOGLE_CLIENT_ID", "YOUTUBE_CLIENT_ID"])).toBe("runtime-google-id");
     expect(youtubeClientId()).toBe("runtime-google-id");
     expect(isYouTubeConfigured()).toBe(true);
     const youtubeConfig = readFileSync(path.resolve("lib/social/youtube/config.ts"), "utf8");
+    const runtime = readFileSync(path.resolve("lib/env/runtime.ts"), "utf8");
     expect(youtubeConfig).not.toMatch(/process\.env\.GOOGLE_CLIENT_ID/);
     expect(youtubeConfig).not.toMatch(/process\.env\.GOOGLE_CLIENT_SECRET/);
-    expect(youtubeConfig).toContain("firstEnvValue");
+    expect(youtubeConfig).toContain("firstRuntimeEnv");
+    expect(runtime).toContain('from "node:process"');
+    expect(runtime).toContain("bag[name]");
   });
 
   it("wires the accounts page CTA to native YouTube, not Upload-Post", () => {
@@ -131,8 +135,12 @@ describe("studio accounts connect routing", () => {
     expect(NATIVE_OAUTH_PLATFORMS).toContain("TWITCH");
     expect(actions).toContain("primaryAccountsConnect");
     expect(actions).not.toContain('redirect("/api/social/upload-post/connect")');
-    expect(start).toContain("authorizeHost");
-    expect(start).toContain("accounts.google.com");
+    expect(start).toContain("logGoogleOAuthEnvPresence");
+    expect(start).toContain("GOOGLE_CLIENT_ID_PRESENT");
+    expect(start).toContain("GOOGLE_CLIENT_SECRET_PRESENT");
+    expect(start).toContain("isYouTubeConfigured");
+    expect(page).toContain('export const dynamic = "force-dynamic"');
+    expect(page).toContain("await connection()");
     expect(LOG_REDACT_PATHS).toContain("GOOGLE_CLIENT_SECRET");
     expect(LOG_REDACT_PATHS).toContain("UPLOAD_POST_API_KEY");
   });

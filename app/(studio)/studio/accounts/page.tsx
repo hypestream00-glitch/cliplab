@@ -1,4 +1,5 @@
 import { requireWorkspaceContext } from "@/lib/auth/session";
+import { connection } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { EmptyState, PageHeader, StatusBadge } from "@/components/dashboard/primitives";
 import { PLATFORM_CAPABILITIES } from "@/lib/social/provider";
@@ -78,8 +79,10 @@ const ERRORS: Record<string, string> = {
 };
 
 export const metadata = { title: "Contas" };
+export const dynamic = "force-dynamic";
 
 export default async function AccountsPage({ searchParams }: PageSearchProps) {
+  await connection();
   const { workspace } = await requireWorkspaceContext();
   const query = await searchParams;
   const error = typeof query.error === "string" ? query.error : "";

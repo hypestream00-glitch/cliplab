@@ -20,6 +20,8 @@ import { limitAction } from "@/lib/security/action-limit";
 import { cookieSecure } from "@/lib/security/cookies";
 import { accountsErrorPath, publicOriginFromRequest, publicRedirectFromRequest } from "@/lib/env/app-url";
 import { logger } from "@/lib/logger";
+import { logGoogleOAuthEnvPresence } from "@/lib/env/runtime";
+import { isYouTubeConfigured, youtubeGoogleCredentialPresence } from "@/lib/social/youtube/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,8 +51,19 @@ export async function GET(request: Request) {
   if (platform === "X" && platformNeedsConfig("X")) {
     return accountsRedirect(request, accountsErrorPath("x-config"));
   }
-  if (platform === "YOUTUBE" && platformNeedsConfig("YOUTUBE")) {
-    return accountsRedirect(request, accountsErrorPath("youtube-config"));
+  if (platform === "YOUTUBE") {
+    logGoogleOAuthEnvPresence();
+    const presence = youtubeGoogleCredentialPresence();
+    logger.info(
+      {
+        GOOGLE_CLIENT_ID_PRESENT: presence.GOOGLE_CLIENT_ID_PRESENT,
+        GOOGLE_CLIENT_SECRET_PRESENT: presence.GOOGLE_CLIENT_SECRET_PRESENT,
+      },
+      "youtube oauth env",
+    );
+    if (!isYouTubeConfigured()) {
+      return accountsRedirect(request, accountsErrorPath("youtube-config"));
+    }
   }
   if (platform === "TWITCH" && platformNeedsConfig("TWITCH")) {
     return accountsRedirect(request, accountsErrorPath("twitch-config"));

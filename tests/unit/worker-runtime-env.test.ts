@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isDatabaseUrlConfigured } from "@/lib/db/prisma";
-import { logWorkerEnvPresence, runtimeEnv, runtimeEnvPresent } from "@/lib/env/runtime";
+import { logWorkerEnvPresence, logGoogleOAuthEnvPresence, runtimeEnv, runtimeEnvPresent } from "@/lib/env/runtime";
 import { isRedisConfigured } from "@/lib/queue/redis";
 
 const root = path.resolve(__dirname, "../..");
@@ -51,6 +51,21 @@ describe("worker runtime env", () => {
       "AUTH_URL PRESENT: false",
     ]);
     expect(lines.join("\n")).not.toMatch(/rediss:\/\/example|postgresql:\/\/example/i);
+  });
+
+  it("logs Google OAuth presence without secret values", () => {
+    vi.stubEnv("GOOGLE_CLIENT_ID", "123-abc.apps.googleusercontent.com");
+    vi.stubEnv("GOOGLE_CLIENT_SECRET", "super-secret-google-value");
+    const lines: string[] = [];
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+      lines.push(String(chunk).replace(/\n$/, ""));
+      return true;
+    });
+    logGoogleOAuthEnvPresence();
+    spy.mockRestore();
+    expect(lines).toEqual(["GOOGLE_CLIENT_ID_PRESENT=true", "GOOGLE_CLIENT_SECRET_PRESENT=true"]);
+    expect(lines.join("\n")).not.toContain("123-abc.apps.googleusercontent.com");
+    expect(lines.join("\n")).not.toContain("super-secret-google-value");
   });
 });
 
