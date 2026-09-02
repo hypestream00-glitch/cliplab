@@ -15,20 +15,16 @@ export type AccountsConnectTarget = {
 
 export const NATIVE_OAUTH_PLATFORMS = ["YOUTUBE", "TWITCH", "KICK", "BILIBILI"] as const;
 
-/** Primary CTA on /studio/accounts. Native YouTube wins over Upload-Post when Google OAuth is configured. */
-export function primaryAccountsConnect(): AccountsConnectTarget | null {
-  if (isYouTubeConfigured()) {
-    return { href: YOUTUBE_NATIVE_CONNECT_HREF, provider: "YOUTUBE", label: "Conectar conta" };
-  }
-  if (isUploadPostPrimary() && isUploadPostConfigured()) {
-    return { href: UPLOAD_POST_CONNECT_HREF, provider: "UPLOAD_POST", label: "Conectar conta" };
-  }
-  return null;
+/**
+ * Primary CTA on /studio/accounts is always native YouTube OAuth.
+ * Never send "+ Conectar conta" to Upload-Post (`invalid-connect-url`).
+ */
+export function primaryAccountsConnect(): AccountsConnectTarget {
+  return { href: YOUTUBE_NATIVE_CONNECT_HREF, provider: "YOUTUBE", label: "Conectar conta" };
 }
 
 export function secondaryAccountsConnect(): AccountsConnectTarget | null {
-  const primary = primaryAccountsConnect();
-  if (primary?.provider === "YOUTUBE" && isUploadPostPrimary() && isUploadPostConfigured()) {
+  if (isUploadPostPrimary() && isUploadPostConfigured()) {
     return { href: UPLOAD_POST_CONNECT_HREF, provider: "UPLOAD_POST", label: "Outras redes" };
   }
   return null;
@@ -38,9 +34,9 @@ export function shouldPrepareUploadPostProfileOnAccountsLoad() {
   return isUploadPostPrimary() && isUploadPostConfigured();
 }
 
-/** Do not block the accounts page when native YouTube OAuth is the primary connect path. */
+/** Upload-Post profile failures must not block native YouTube connect. */
 export function shouldSurfaceUploadPostProfileError() {
-  return shouldPrepareUploadPostProfileOnAccountsLoad() && !isYouTubeConfigured();
+  return false;
 }
 
 export function uploadPostGridPlatforms(accounts: { platform: string; provider?: string | null }[]): SocialPlatform[] {

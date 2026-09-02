@@ -1,4 +1,4 @@
-import { envTruthy } from "@/lib/env/status";
+import { envTruthy, firstEnvValue } from "@/lib/env/status";
 import { oauthCallbackUrl } from "@/lib/env/app-url";
 
 export const GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -14,30 +14,20 @@ export const YOUTUBE_SCOPES = [
 
 export const YOUTUBE_ANALYTICS_SCOPE = "https://www.googleapis.com/auth/yt-analytics.readonly";
 
-export function youtubeClientId() {
-  return (
-    process.env.GOOGLE_CLIENT_ID?.trim() ||
-    process.env.YOUTUBE_CLIENT_ID?.trim() ||
-    process.env.AUTH_GOOGLE_ID?.trim() ||
-    ""
-  );
+export function youtubeClientId(source: NodeJS.ProcessEnv = process.env) {
+  return firstEnvValue(["GOOGLE_CLIENT_ID", "YOUTUBE_CLIENT_ID", "AUTH_GOOGLE_ID"], source);
 }
 
-export function youtubeClientSecret() {
-  return (
-    process.env.GOOGLE_CLIENT_SECRET?.trim() ||
-    process.env.YOUTUBE_CLIENT_SECRET?.trim() ||
-    process.env.AUTH_GOOGLE_SECRET?.trim() ||
-    ""
-  );
+export function youtubeClientSecret(source: NodeJS.ProcessEnv = process.env) {
+  return firstEnvValue(["GOOGLE_CLIENT_SECRET", "YOUTUBE_CLIENT_SECRET", "AUTH_GOOGLE_SECRET"], source);
 }
 
 export function youtubeRedirectUri() {
   return oauthCallbackUrl("YOUTUBE");
 }
 
-export function isYouTubeConfigured() {
-  return Boolean(youtubeClientId() && youtubeClientSecret());
+export function isYouTubeConfigured(source: NodeJS.ProcessEnv = process.env) {
+  return Boolean(youtubeClientId(source) && youtubeClientSecret(source));
 }
 
 export function youtubeOAuthStatus(): "CONFIGURED" | "NOT CONFIGURED" {

@@ -33,7 +33,7 @@ import { visibleSocialAccountWhere } from "@/lib/data/visibility";
 import { logger } from "@/lib/logger";
 import {
   NATIVE_OAUTH_PLATFORMS,
-  primaryAccountsConnect,
+  YOUTUBE_NATIVE_CONNECT_HREF,
   secondaryAccountsConnect,
   shouldPrepareUploadPostProfileOnAccountsLoad,
   shouldSurfaceUploadPostProfileError,
@@ -87,7 +87,6 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
   const connectStatus = typeof query.connect_status === "string" ? query.connect_status : "";
   const unified = isUploadPostPrimary();
   const configured = isUploadPostConfigured();
-  const primaryConnect = primaryAccountsConnect();
   const secondaryConnect = secondaryAccountsConnect();
   const justConnected = connected === "1" || connectStatus === "success";
   let profileError = "";
@@ -125,48 +124,32 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
         title="Contas sociais"
         description="Conecte suas redes para publicar e agendar seus clips."
           actions={
-            primaryConnect || configured ? (
-              <div className="flex flex-wrap gap-2">
-                {primaryConnect ? (
-                  <Button size="sm" asChild>
-                    <a href={primaryConnect.href}>+ {primaryConnect.label}</a>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" asChild>
+                <a href={YOUTUBE_NATIVE_CONNECT_HREF}>+ Conectar conta</a>
+              </Button>
+              {secondaryConnect ? (
+                <Button size="sm" variant="outline" asChild>
+                  <a href={secondaryConnect.href}>{secondaryConnect.label}</a>
+                </Button>
+              ) : null}
+              {configured ? (
+                <form action={refreshSocialAccountsAction}>
+                  <Button size="sm" variant="outline" type="submit">
+                    Atualizar contas
                   </Button>
-                ) : null}
-                {secondaryConnect ? (
-                  <Button size="sm" variant="outline" asChild>
-                    <a href={secondaryConnect.href}>{secondaryConnect.label}</a>
-                  </Button>
-                ) : null}
-                {configured ? (
-                  <form action={refreshSocialAccountsAction}>
-                    <Button size="sm" variant="outline" type="submit">
-                      Atualizar contas
-                    </Button>
-                  </form>
-                ) : null}
-              </div>
-            ) : null
+                </form>
+              ) : null}
+            </div>
           }
         />
         <ConnectSuccessToast show={justConnected} accountCount={accounts.length} />
-        {primaryConnect || configured ? null : (
-          <div className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-[13px]">
-            <p className="font-medium">Ainda não é possível conectar redes</p>
-            <p className="text-muted-foreground">Peça ao administrador para concluir a configuração.</p>
-          </div>
-        )}
         {profileError ? <p className="mb-3 text-[12px] text-destructive">{profileError}</p> : null}
         {error ? <p className="mb-3 text-[12px] text-destructive">{ERRORS[error] ?? error}</p> : null}
         {accounts.length === 0 ? (
           <EmptyState
             title="Nenhuma conta conectada."
-            description={
-              primaryConnect?.provider === "YOUTUBE"
-                ? "Clique em Conectar conta e autorize o YouTube na sua conta Google."
-                : configured
-                  ? "Clique em Conectar conta e autorize as plataformas."
-                  : "Conecte uma rede social para publicar seus clips."
-            }
+            description="Clique em Conectar conta e autorize o YouTube na sua conta Google."
           />
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

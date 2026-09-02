@@ -34,9 +34,7 @@ const PLATFORMS = new Set<SocialPlatform>([
 ]);
 
 export async function connectSocialNetworksAction() {
-  const target = primaryAccountsConnect();
-  if (!target) redirect("/studio/accounts");
-  redirect(target.href);
+  redirect(primaryAccountsConnect().href);
 }
 
 export async function refreshSocialAccountsAction() {
