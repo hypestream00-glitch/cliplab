@@ -1,4 +1,4 @@
-import { capabilityLabel, type CapabilityState } from "@/lib/platforms/capabilities";
+import { capabilityLabel, type CapabilityState } from "@/lib/platforms/capability-types";
 
 const STYLES: Record<CapabilityState, string> = {
   AVAILABLE: "border-emerald-500/40 text-emerald-300",

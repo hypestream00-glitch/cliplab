@@ -4,6 +4,28 @@ import type { SocialPlatform } from "@/generated/prisma/client";
 
 const TTL_MS = 10 * 60 * 1000;
 
+export type OAuthStateRecord = {
+  usedAt: Date | null;
+  expiresAt: Date;
+  workspaceId: string;
+  userId: string;
+  platform: SocialPlatform;
+};
+
+export function evaluateOAuthStateRecord(
+  record: OAuthStateRecord | null,
+  params: { workspaceId: string; userId: string; platform: SocialPlatform },
+  now = Date.now(),
+): "ok" | "missing" | "used" | "expired" | "mismatch" {
+  if (!record) return "missing";
+  if (record.usedAt) return "used";
+  if (record.expiresAt.getTime() < now) return "expired";
+  if (record.workspaceId !== params.workspaceId || record.userId !== params.userId || record.platform !== params.platform) {
+    return "mismatch";
+  }
+  return "ok";
+}
+
 export async function issueOAuthState(params: {
   workspaceId: string;
   userId: string;
@@ -33,11 +55,7 @@ export async function consumeOAuthState(params: {
   platform: SocialPlatform;
 }) {
   const record = await prisma.socialOAuthState.findUnique({ where: { state: params.state } });
-  if (!record) return null;
-  if (record.usedAt) return null;
-  if (record.expiresAt.getTime() < Date.now()) return null;
-  if (record.workspaceId !== params.workspaceId || record.userId !== params.userId) return null;
-  if (record.platform !== params.platform) return null;
+  if (!record || evaluateOAuthStateRecord(record, params) !== "ok") return null;
   const updated = await prisma.socialOAuthState.updateMany({
     where: { id: record.id, usedAt: null },
     data: { usedAt: new Date() },

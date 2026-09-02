@@ -24,7 +24,7 @@ describe("Railway web image", () => {
     expect(pkg.scripts.start).toBe("node scripts/start-web.mjs");
     expect(pkg.scripts["start:web"]).toBe("node scripts/start-web.mjs");
     expect(pkg.scripts.worker).toBe("node scripts/start-worker.mjs");
-    expect(startWeb).toContain('HOSTNAME: "0.0.0.0"');
+    expect(startWeb).toContain('process.env.HOSTNAME = "0.0.0.0"');
     expect(startWeb).toContain('process.env.PORT ?? "3000"');
     expect(startWeb).toContain('"start", "-H", "0.0.0.0"');
     expect(startWeb).not.toContain("127.0.0.1");

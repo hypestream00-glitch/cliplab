@@ -17,6 +17,7 @@ import { isUploadPostConfigured } from "@/lib/social/upload-post/config";
 import { syncUploadPostAccounts } from "@/lib/social/upload-post/accounts";
 import { syncUploadPostAnalytics } from "@/lib/social/upload-post/analytics";
 import { primaryAccountsConnect } from "@/lib/social/accounts-connect";
+import { noteUploadPostError, shouldCallUploadPostRemote } from "@/lib/social/upload-post/health";
 
 const PLATFORMS = new Set<SocialPlatform>([
   "TIKTOK",
@@ -39,9 +40,13 @@ export async function connectSocialNetworksAction() {
 
 export async function refreshSocialAccountsAction() {
   const ctx = await requireWorkspaceContext();
-  if (isUploadPostPrimary() && isUploadPostConfigured()) {
-    await syncUploadPostAccounts(ctx.workspace.id);
-    await syncUploadPostAnalytics(ctx.workspace.id).catch(() => undefined);
+  if (isUploadPostPrimary() && isUploadPostConfigured() && shouldCallUploadPostRemote()) {
+    try {
+      await syncUploadPostAccounts(ctx.workspace.id);
+      await syncUploadPostAnalytics(ctx.workspace.id).catch(() => undefined);
+    } catch (error) {
+      noteUploadPostError(error);
+    }
   }
   revalidatePath("/studio/accounts");
   revalidatePath("/studio/metrics/accounts");

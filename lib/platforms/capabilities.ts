@@ -9,11 +9,13 @@ import { isBilibiliConfigured, isBilibiliPublishingApproved } from "@/lib/social
 import { isTwitchOAuthConfigured } from "@/lib/social/twitch/config";
 import { isUploadPostPrimary } from "@/lib/social/router";
 import { isUploadPostConfigured } from "@/lib/social/upload-post/config";
+import { type CapabilityState, capabilityLabel } from "@/lib/platforms/capability-types";
+
+export type { CapabilityState };
+export { capabilityLabel };
 
 export const ECOSYSTEM_PLATFORMS = ["TWITCH", "YOUTUBE", "BILIBILI", "TIKTOK", "INSTAGRAM", "KICK"] as const;
 export type EcosystemPlatform = (typeof ECOSYSTEM_PLATFORMS)[number];
-
-export type CapabilityState = "AVAILABLE" | "NOT_CONFIGURED" | "NOT_SUPPORTED" | "REQUIRES_APPROVAL" | "BETA";
 
 export type EcosystemCapability =
   | "trending"
@@ -185,21 +187,6 @@ export function resolvePlatformCapabilities(source: NodeJS.ProcessEnv = process.
 
 export function getPlatformCapabilities(platform: EcosystemPlatform, source?: NodeJS.ProcessEnv) {
   return resolvePlatformCapabilities(source)[platform];
-}
-
-export function capabilityLabel(state: CapabilityState) {
-  switch (state) {
-    case "AVAILABLE":
-      return "Disponível";
-    case "NOT_CONFIGURED":
-      return "Aguardando credenciais";
-    case "NOT_SUPPORTED":
-      return "Não suportado pela API oficial";
-    case "REQUIRES_APPROVAL":
-      return "Requer aprovação da plataforma";
-    case "BETA":
-      return "Beta";
-  }
 }
 
 export function trendingUnavailableReason(platform: EcosystemPlatform) {

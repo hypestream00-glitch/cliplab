@@ -19,6 +19,7 @@ import { accountsConnectedPath, accountsErrorPath, publicOriginFromRequest, publ
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 function accountsRedirect(request: Request, error?: string, connected?: string) {
   const path = error ? accountsErrorPath(error) : connected ? accountsConnectedPath(connected) : "/studio/accounts";

@@ -30,6 +30,7 @@ import { isUploadPostConfigured } from "@/lib/social/upload-post/config";
 import { ensureUploadPostProfile } from "@/lib/social/upload-post/profiles";
 import { syncUploadPostAccounts } from "@/lib/social/upload-post/accounts";
 import { UploadPostApiError, UploadPostPlanError } from "@/lib/social/upload-post/errors";
+import { noteUploadPostError } from "@/lib/social/upload-post/health";
 import { visibleSocialAccountWhere } from "@/lib/data/visibility";
 import { logger } from "@/lib/logger";
 import {
@@ -38,6 +39,7 @@ import {
   secondaryAccountsConnect,
   shouldPrepareUploadPostProfileOnAccountsLoad,
   shouldSurfaceUploadPostProfileError,
+  uploadPostAccountsWarning,
   uploadPostGridPlatforms,
 } from "@/lib/social/accounts-connect";
 import {
@@ -62,7 +64,8 @@ const ERRORS: Record<string, string> = {
   "tiktok-oauth": "Falha no OAuth TikTok.",
   "meta-config": "Configure META_APP_ID e META_APP_SECRET no servidor.",
   "x-config": "Configure X_CLIENT_ID e X_CLIENT_SECRET no servidor.",
-  "youtube-config": "Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET (ou AUTH_GOOGLE_*) no servidor.",
+  "youtube-config": "Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no servidor.",
+  "google-oauth-not-configured": "Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no servidor.",
   "twitch-config": "Configure TWITCH_CLIENT_ID e TWITCH_CLIENT_SECRET no servidor.",
   "kick-config": "Configure KICK_CLIENT_ID e KICK_CLIENT_SECRET no servidor.",
   "bilibili-config": "Configure BILIBILI_CLIENT_ID e BILIBILI_CLIENT_SECRET no servidor.",
@@ -92,26 +95,27 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
   const configured = isUploadPostConfigured();
   const secondaryConnect = secondaryAccountsConnect();
   const justConnected = connected === "1" || connectStatus === "success";
-  let profileError = "";
+  let uploadPostWarning = uploadPostAccountsWarning();
   if (shouldPrepareUploadPostProfileOnAccountsLoad()) {
     try {
       await ensureUploadPostProfile(workspace.id);
       await syncUploadPostAccounts(workspace.id);
     } catch (err) {
+      noteUploadPostError(err);
       logger.warn(
         {
           errType: err instanceof Error ? err.name : "Error",
           status: err instanceof UploadPostApiError ? err.status : undefined,
           errorCode: err instanceof UploadPostApiError ? err.code : undefined,
           provider: "UPLOAD_POST",
+          operation: "accounts_prepare",
         },
         "upload-post profile prepare failed",
       );
+      uploadPostWarning = "Integração temporariamente indisponível";
       if (shouldSurfaceUploadPostProfileError()) {
-        profileError =
-          err instanceof UploadPostPlanError
-            ? err.message
-            : "Não foi possível preparar o perfil de redes sociais. Tente Atualizar contas.";
+        uploadPostWarning =
+          err instanceof UploadPostPlanError ? err.message : "Integração temporariamente indisponível";
       }
     }
   }
@@ -147,13 +151,15 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
           }
         />
         <ConnectSuccessToast show={justConnected} accountCount={accounts.length} />
-        {profileError ? <p className="mb-3 text-[12px] text-destructive">{profileError}</p> : null}
         {error ? <p className="mb-3 text-[12px] text-destructive">{ERRORS[error] ?? error}</p> : null}
         {accounts.length === 0 ? (
           <EmptyState
             title="Nenhuma conta conectada."
             description="Clique em Conectar conta e autorize o YouTube na sua conta Google."
           />
+        ) : null}
+        {uploadPostWarning ? (
+          <p className="mb-3 text-[12px] text-amber-200">Outras redes: {uploadPostWarning}</p>
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {uploadPostGridPlatforms(accounts).map((platform) => {

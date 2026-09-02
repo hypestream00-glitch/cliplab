@@ -18,14 +18,11 @@ import { YouTubeApiError } from "@/lib/social/youtube/http";
 import { SocialApiError } from "@/lib/social/errors";
 import { limitAction } from "@/lib/security/action-limit";
 import { cookieSecure } from "@/lib/security/cookies";
-import { accountsErrorPath, publicOriginFromRequest, publicRedirectFromRequest } from "@/lib/env/app-url";
+import { accountsErrorPath, isUnusablePublicHostname, publicOriginFromRequest, publicRedirectFromRequest } from "@/lib/env/app-url";
 import { logger } from "@/lib/logger";
-import {
-  googleOAuthIdFromProcessEnv,
-  googleOAuthSecretFromProcessEnv,
-  logGoogleOAuthEnvPresence,
-  readLiveEnv,
-} from "@/lib/env/request-env";
+import { googleOAuthEnvReport, isGoogleOAuthConfigured, logGoogleOAuthEnvPresence } from "@/lib/env/server";
+import { hydrateProcessEnvFromProc } from "@/lib/env/proc-environ";
+import { platformConnection } from "@/lib/platforms/connection-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,6 +44,10 @@ export async function GET(request: Request) {
     return accountsRedirect(request, "/studio/accounts");
   }
 
+  if (platformConnection(platform).connectionProvider === "UPLOAD_POST") {
+    return accountsRedirect(request, "/studio/accounts");
+  }
+
   if (platform === "TIKTOK" && platformNeedsConfig("TIKTOK")) {
     return accountsRedirect(request, accountsErrorPath("tiktok-config"));
   }
@@ -57,14 +58,22 @@ export async function GET(request: Request) {
     return accountsRedirect(request, accountsErrorPath("x-config"));
   }
   if (platform === "YOUTUBE") {
-    const googleClientId = googleOAuthIdFromProcessEnv();
-    const googleClientSecret = googleOAuthSecretFromProcessEnv();
-    const GOOGLE_CLIENT_ID_PRESENT = readLiveEnv("GOOGLE_CLIENT_ID").length > 0;
-    const GOOGLE_CLIENT_SECRET_PRESENT = readLiveEnv("GOOGLE_CLIENT_SECRET").length > 0;
+    hydrateProcessEnvFromProc();
+    const report = googleOAuthEnvReport();
     logGoogleOAuthEnvPresence();
-    logger.info({ GOOGLE_CLIENT_ID_PRESENT, GOOGLE_CLIENT_SECRET_PRESENT }, "youtube oauth env");
-    if (!googleClientId || !googleClientSecret) {
-      return accountsRedirect(request, accountsErrorPath("youtube-config"));
+    logger.info(
+      {
+        provider: "YOUTUBE",
+        operation: "oauth_start",
+        googleClientIdPresent: report.googleClientIdPresent,
+        googleClientSecretPresent: report.googleClientSecretPresent,
+        googleOAuthConfigured: report.googleOAuthConfigured,
+        clientIdLookup: report.clientIdLookup,
+      },
+      "youtube oauth env",
+    );
+    if (!isGoogleOAuthConfigured()) {
+      return accountsRedirect(request, accountsErrorPath("google-oauth-not-configured"));
     }
   }
   if (platform === "TWITCH" && platformNeedsConfig("TWITCH")) {
@@ -78,6 +87,16 @@ export async function GET(request: Request) {
   }
 
   const redirectUri = oauthRedirectUri(platform);
+  try {
+    const host = new URL(redirectUri).hostname;
+    if (isUnusablePublicHostname(host)) {
+      logger.warn({ provider: platform, operation: "oauth_start", host }, "oauth redirect host unusable");
+      return accountsRedirect(request, accountsErrorPath("oauth"));
+    }
+  } catch {
+    return accountsRedirect(request, accountsErrorPath("oauth"));
+  }
+
   const issued = usesOfficialOAuth(platform)
     ? await issueOAuthState({
         workspaceId: ctx.workspace.id,
@@ -102,14 +121,18 @@ export async function GET(request: Request) {
     try {
       authorizeHost = new URL(authorizationUrl).hostname;
     } catch {
-      logger.warn({ platform }, "oauth start produced an invalid authorization url");
+      logger.warn({ platform, operation: "oauth_start" }, "oauth start produced an invalid authorization url");
       return accountsRedirect(request, accountsErrorPath("oauth"));
     }
     if (platform === "YOUTUBE" && authorizeHost !== "accounts.google.com") {
-      logger.warn({ platform, authorizeHost }, "youtube oauth host unexpected");
+      logger.warn({ platform, authorizeHost, operation: "oauth_start" }, "youtube oauth host unexpected");
       return accountsRedirect(request, accountsErrorPath("oauth"));
     }
-    logger.info({ platform, authorizeHost, redirectUri }, "oauth start redirect");
+    if (platform === "TWITCH" && authorizeHost !== "id.twitch.tv") {
+      logger.warn({ platform, authorizeHost, operation: "oauth_start" }, "twitch oauth host unexpected");
+      return accountsRedirect(request, accountsErrorPath("oauth"));
+    }
+    logger.info({ provider: platform, operation: "oauth_start", authorizeHost, redirectUri }, "oauth start redirect");
   } catch (error) {
     const message =
       error instanceof TikTokApiError ||
@@ -119,7 +142,7 @@ export async function GET(request: Request) {
       error instanceof SocialApiError
         ? error.code
         : "oauth";
-    logger.warn({ errType: error instanceof Error ? error.name : "Error", platform, code: message }, "oauth start failed");
+    logger.warn({ errType: error instanceof Error ? error.name : "Error", platform, code: message, operation: "oauth_start" }, "oauth start failed");
     return accountsRedirect(request, accountsErrorPath(message));
   }
 

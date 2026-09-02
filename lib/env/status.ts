@@ -1,11 +1,13 @@
 import { stripeSecretMode, stripeWebhookConfigured } from "@/lib/billing/stripe-mode";
+import { getServerEnv } from "@/lib/env/server";
 
-export function envPresent(name: string, source: NodeJS.ProcessEnv = process.env) {
+export function envPresent(name: string, source?: NodeJS.ProcessEnv) {
   return envValue(name, source).length > 0;
 }
 
-/** Dynamic lookup by live key names so Docker `next build` does not freeze empty `process.env.NAME`. */
-export function envValue(name: string, source: NodeJS.ProcessEnv = process.env) {
+/** Dynamic lookup by live key names so Docker `next build` does not freeze empty values. */
+export function envValue(name: string, source?: NodeJS.ProcessEnv) {
+  if (source === undefined) return getServerEnv(name);
   const wanted = name.trim();
   if (!wanted) return "";
   for (const key of Object.keys(source)) {
@@ -16,7 +18,7 @@ export function envValue(name: string, source: NodeJS.ProcessEnv = process.env) 
   return "";
 }
 
-export function firstEnvValue(names: readonly string[], source: NodeJS.ProcessEnv = process.env) {
+export function firstEnvValue(names: readonly string[], source?: NodeJS.ProcessEnv) {
   for (const name of names) {
     const value = envValue(name, source);
     if (value) return value;

@@ -1,20 +1,16 @@
-import { readLiveEnv } from "@/lib/env/request-env";
+import { getServerEnv, hasServerEnv, logGoogleOAuthEnvPresence } from "@/lib/env/server";
 
-/**
- * Runtime env access that bundlers cannot replace with build-time constants.
- * Reads the live process env bag by key name on every call.
- */
 export function runtimeEnv(name: string): string {
-  return readLiveEnv(name);
+  return getServerEnv(name);
 }
 
 export function runtimeEnvPresent(name: string): boolean {
-  return runtimeEnv(name).length > 0;
+  return hasServerEnv(name);
 }
 
 export function firstRuntimeEnv(names: readonly string[]): string {
   for (const name of names) {
-    const value = runtimeEnv(name);
+    const value = getServerEnv(name);
     if (value) return value;
   }
   return "";
@@ -27,4 +23,4 @@ export function logWorkerEnvPresence() {
   process.stdout.write(`AUTH_URL PRESENT: ${runtimeEnvPresent("AUTH_URL")}\n`);
 }
 
-export { logGoogleOAuthEnvPresence } from "@/lib/env/request-env";
+export { logGoogleOAuthEnvPresence };

@@ -113,15 +113,15 @@ describe("studio accounts connect routing", () => {
     expect(isYouTubeConfigured()).toBe(true);
     const youtubeConfig = readFileSync(path.resolve("lib/social/youtube/config.ts"), "utf8");
     const runtime = readFileSync(path.resolve("lib/env/runtime.ts"), "utf8");
-    const requestEnv = readFileSync(path.resolve("lib/env/request-env.ts"), "utf8");
+    const serverEnv = readFileSync(path.resolve("lib/env/server.ts"), "utf8");
     expect(youtubeConfig).not.toMatch(/process\.env\.GOOGLE_CLIENT_ID/);
     expect(youtubeConfig).not.toMatch(/process\.env\.GOOGLE_CLIENT_SECRET/);
-    expect(youtubeConfig).toContain("googleOAuthIdFromProcessEnv");
+    expect(youtubeConfig).toContain("googleOAuthClientId");
     expect(runtime).not.toContain('from "node:process"');
-    expect(runtime).toContain("readLiveEnv");
-    expect(requestEnv).toContain("Object.keys(env)");
-    expect(requestEnv).toContain('Reflect.get(globalThis, "process")');
-    expect(requestEnv).not.toMatch(/process\.env\.GOOGLE_CLIENT_ID/);
+    expect(runtime).toContain("getServerEnv");
+    expect(serverEnv).toContain("new Function");
+    expect(serverEnv).not.toMatch(/process\.env\.GOOGLE_CLIENT_ID/);
+    expect(readFileSync(path.resolve("lib/env/proc-environ.ts"), "utf8")).toContain("/proc/self/environ");
   });
 
   it("wires the accounts page CTA to native YouTube, not Upload-Post", () => {
@@ -143,10 +143,10 @@ describe("studio accounts connect routing", () => {
     expect(actions).toContain("primaryAccountsConnect");
     expect(actions).not.toContain('redirect("/api/social/upload-post/connect")');
     expect(start).toContain("logGoogleOAuthEnvPresence");
-    expect(start).toContain("GOOGLE_CLIENT_ID_PRESENT");
-    expect(start).toContain("GOOGLE_CLIENT_SECRET_PRESENT");
-    expect(start).toContain("googleOAuthIdFromProcessEnv");
-    expect(start).toContain("readLiveEnv");
+    expect(start).toContain("googleClientIdPresent");
+    expect(start).toContain("googleClientSecretPresent");
+    expect(start).toContain("isGoogleOAuthConfigured");
+    expect(start).toContain("google-oauth-not-configured");
     expect(start).not.toContain("isYouTubeConfigured");
     expect(start).not.toMatch(/process\.env\.GOOGLE_CLIENT_ID/);
     expect(start).not.toMatch(/env\.GOOGLE_CLIENT_ID/);

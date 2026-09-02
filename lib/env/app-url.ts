@@ -1,5 +1,6 @@
 import { isUploadPostPrimary } from "@/lib/social/router";
 import { brand } from "@/lib/config/brand";
+import { getServerEnv } from "@/lib/env/server";
 
 const CALLBACK_PATH = "/api/social/oauth/callback";
 const DEV_ORIGIN = "http://localhost:3000";
@@ -11,7 +12,16 @@ export type PublicOriginInput = {
 };
 
 function envOf(input?: PublicOriginInput) {
-  return input?.env ?? process.env;
+  return input?.env ?? livePublicEnv();
+}
+
+function livePublicEnv(): NodeJS.ProcessEnv {
+  return {
+    NODE_ENV: getServerEnv("NODE_ENV") || process.env.NODE_ENV,
+    APP_URL: getServerEnv("APP_URL"),
+    AUTH_URL: getServerEnv("AUTH_URL"),
+    NEXTAUTH_URL: getServerEnv("NEXTAUTH_URL"),
+  } as NodeJS.ProcessEnv;
 }
 
 function isProductionEnv(source: NodeJS.ProcessEnv) {
@@ -155,14 +165,21 @@ export function accountsConnectedPath(value: string) {
 }
 
 export function oauthCallbackUrl(platform?: "TIKTOK" | "INSTAGRAM" | "FACEBOOK" | "X" | "YOUTUBE") {
-  if (platform === "TIKTOK" && process.env.TIKTOK_REDIRECT_URI?.trim()) return process.env.TIKTOK_REDIRECT_URI.trim();
-  if ((platform === "INSTAGRAM" || platform === "FACEBOOK") && process.env.META_REDIRECT_URI?.trim()) {
-    return process.env.META_REDIRECT_URI.trim();
+  if (platform === "TIKTOK") {
+    const explicit = getServerEnv("TIKTOK_REDIRECT_URI");
+    if (originFromCandidate(explicit)) return explicit;
   }
-  if (platform === "X" && process.env.X_REDIRECT_URI?.trim()) return process.env.X_REDIRECT_URI.trim();
+  if (platform === "INSTAGRAM" || platform === "FACEBOOK") {
+    const explicit = getServerEnv("META_REDIRECT_URI");
+    if (originFromCandidate(explicit)) return explicit;
+  }
+  if (platform === "X") {
+    const explicit = getServerEnv("X_REDIRECT_URI");
+    if (originFromCandidate(explicit)) return explicit;
+  }
   if (platform === "YOUTUBE") {
-    const explicit = process.env.GOOGLE_REDIRECT_URI?.trim() || process.env.YOUTUBE_REDIRECT_URI?.trim();
-    if (explicit) return explicit;
+    const explicit = getServerEnv("GOOGLE_REDIRECT_URI") || getServerEnv("YOUTUBE_REDIRECT_URI");
+    if (explicit && originFromCandidate(explicit) && explicit.includes(CALLBACK_PATH)) return explicit.replace(/\/$/, "");
   }
   return `${publicBaseUrl()}${CALLBACK_PATH}`;
 }

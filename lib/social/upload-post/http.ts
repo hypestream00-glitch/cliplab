@@ -81,6 +81,10 @@ async function realRequest(opts: UploadPostHttpRequest): Promise<UploadPostHttpR
     }
   }
   logger.info({ provider: "upload-post", operation: opts.method, path: opts.path, status: response.status }, "upload-post http");
+  if (response.status === 401) {
+    const { rememberUploadPostAuthError } = await import("@/lib/social/upload-post/health");
+    rememberUploadPostAuthError();
+  }
   return { status: response.status, json, text };
 }
 

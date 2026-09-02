@@ -1,5 +1,5 @@
 import { envTruthy } from "@/lib/env/status";
-import { googleOAuthIdFromProcessEnv, googleOAuthSecretFromProcessEnv } from "@/lib/env/request-env";
+import { googleOAuthClientId, googleOAuthClientSecret, isGoogleOAuthConfigured } from "@/lib/env/server";
 import { oauthCallbackUrl } from "@/lib/env/app-url";
 
 export const GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -16,11 +16,11 @@ export const YOUTUBE_SCOPES = [
 export const YOUTUBE_ANALYTICS_SCOPE = "https://www.googleapis.com/auth/yt-analytics.readonly";
 
 export function youtubeClientId() {
-  return googleOAuthIdFromProcessEnv();
+  return googleOAuthClientId();
 }
 
 export function youtubeClientSecret() {
-  return googleOAuthSecretFromProcessEnv();
+  return googleOAuthClientSecret();
 }
 
 export function youtubeRedirectUri() {
@@ -28,7 +28,7 @@ export function youtubeRedirectUri() {
 }
 
 export function isYouTubeConfigured() {
-  return Boolean(youtubeClientId() && youtubeClientSecret());
+  return isGoogleOAuthConfigured();
 }
 
 export function youtubeOAuthStatus(): "CONFIGURED" | "NOT CONFIGURED" {
