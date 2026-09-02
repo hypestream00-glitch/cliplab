@@ -15,23 +15,20 @@ import { metaOAuth } from "@/lib/social/meta/oauth";
 import { createMetaPending } from "@/lib/social/meta/pending";
 import { logger } from "@/lib/logger";
 import { limitAction } from "@/lib/security/action-limit";
+import { accountsConnectedPath, accountsErrorPath, publicOriginFromRequest, publicRedirectFromRequest } from "@/lib/env/app-url";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function accountsRedirect(request: Request, error?: string, connected?: string) {
-  const path = error
-    ? `/studio/accounts?error=${encodeURIComponent(error)}`
-    : connected
-      ? `/studio/accounts?connected=${encodeURIComponent(connected)}`
-      : "/studio/accounts";
-  return NextResponse.redirect(new URL(path, request.url));
+  const path = error ? accountsErrorPath(error) : connected ? accountsConnectedPath(connected) : "/studio/accounts";
+  return NextResponse.redirect(publicRedirectFromRequest(path, request));
 }
 
 export async function GET(request: Request) {
   const limited = await limitAction("oauth-callback", 40, 60_000);
   if (!limited.ok) {
-    return NextResponse.redirect(new URL("/studio/accounts?error=rate-limit", request.url));
+    return NextResponse.redirect(publicRedirectFromRequest(accountsErrorPath("rate-limit"), request));
   }
   const ctx = await requireWorkspaceContext();
   const url = new URL(request.url);
@@ -80,7 +77,7 @@ export async function GET(request: Request) {
   }
 
   const provider = getSocialProvider(platform);
-  const redirectUri = usesDevelopmentOAuth(platform) ? url.origin : oauthRedirectUri(platform);
+  const redirectUri = usesDevelopmentOAuth(platform) ? publicOriginFromRequest(request) : oauthRedirectUri(platform);
 
   try {
     if (platform === "INSTAGRAM" || platform === "FACEBOOK") {
@@ -104,7 +101,7 @@ export async function GET(request: Request) {
           metadata: { platform, pages: discovery.pages.length },
         },
       });
-      return clear(NextResponse.redirect(new URL(`/studio/accounts/meta?pending=${pendingId}`, request.url)));
+      return clear(NextResponse.redirect(publicRedirectFromRequest(`/studio/accounts/meta?pending=${pendingId}`, request)));
     }
 
     const callback = await provider.handleCallback({ code, redirectUri, codeVerifier: officialVerifier || undefined });

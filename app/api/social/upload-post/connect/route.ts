@@ -4,12 +4,13 @@ import { isUploadPostConfigured } from "@/lib/social/upload-post/config";
 import { generateUploadPostConnectUrl } from "@/lib/social/upload-post/connect";
 import { UploadPostConfigError, UploadPostPlanError } from "@/lib/social/upload-post/errors";
 import { PlanLimitError, assertSocialAccountLimit } from "@/lib/billing/usage";
+import { accountsErrorPath, publicRedirectFromRequest } from "@/lib/env/app-url";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function accountsError(request: Request, code: string) {
-  return NextResponse.redirect(new URL(`/studio/accounts?error=${encodeURIComponent(code)}`, request.url));
+  return NextResponse.redirect(publicRedirectFromRequest(accountsErrorPath(code), request));
 }
 
 export async function GET(request: Request) {

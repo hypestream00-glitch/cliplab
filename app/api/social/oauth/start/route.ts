@@ -18,42 +18,47 @@ import { YouTubeApiError } from "@/lib/social/youtube/http";
 import { SocialApiError } from "@/lib/social/errors";
 import { limitAction } from "@/lib/security/action-limit";
 import { cookieSecure } from "@/lib/security/cookies";
+import { accountsErrorPath, publicOriginFromRequest, publicRedirectFromRequest } from "@/lib/env/app-url";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function accountsRedirect(request: Request, path: string) {
+  return NextResponse.redirect(publicRedirectFromRequest(path, request));
+}
+
 export async function GET(request: Request) {
   const limited = await limitAction("oauth-start", 20, 60_000);
   if (!limited.ok) {
-    return NextResponse.redirect(new URL("/studio/accounts?error=rate-limit", request.url));
+    return accountsRedirect(request, accountsErrorPath("rate-limit"));
   }
   const ctx = await requireWorkspaceContext();
   const url = new URL(request.url);
   const platform = url.searchParams.get("platform") ?? "";
   if (!isSocialPlatform(platform)) {
-    return NextResponse.redirect(new URL("/studio/accounts", request.url));
+    return accountsRedirect(request, "/studio/accounts");
   }
 
   if (platform === "TIKTOK" && platformNeedsConfig("TIKTOK")) {
-    return NextResponse.redirect(new URL("/studio/accounts?error=tiktok-config", request.url));
+    return accountsRedirect(request, accountsErrorPath("tiktok-config"));
   }
   if ((platform === "INSTAGRAM" || platform === "FACEBOOK") && platformNeedsConfig(platform)) {
-    return NextResponse.redirect(new URL("/studio/accounts?error=meta-config", request.url));
+    return accountsRedirect(request, accountsErrorPath("meta-config"));
   }
   if (platform === "X" && platformNeedsConfig("X")) {
-    return NextResponse.redirect(new URL("/studio/accounts?error=x-config", request.url));
+    return accountsRedirect(request, accountsErrorPath("x-config"));
   }
   if (platform === "YOUTUBE" && platformNeedsConfig("YOUTUBE")) {
-    return NextResponse.redirect(new URL("/studio/accounts?error=youtube-config", request.url));
+    return accountsRedirect(request, accountsErrorPath("youtube-config"));
   }
   if (platform === "TWITCH" && platformNeedsConfig("TWITCH")) {
-    return NextResponse.redirect(new URL("/studio/accounts?error=twitch-config", request.url));
+    return accountsRedirect(request, accountsErrorPath("twitch-config"));
   }
   if (platform === "KICK" && platformNeedsConfig("KICK")) {
-    return NextResponse.redirect(new URL("/studio/accounts?error=kick-config", request.url));
+    return accountsRedirect(request, accountsErrorPath("kick-config"));
   }
   if (platform === "BILIBILI" && platformNeedsConfig("BILIBILI")) {
-    return NextResponse.redirect(new URL("/studio/accounts?error=bilibili-config", request.url));
+    return accountsRedirect(request, accountsErrorPath("bilibili-config"));
   }
 
   const redirectUri = oauthRedirectUri(platform);
@@ -75,7 +80,7 @@ export async function GET(request: Request) {
     authorizationUrl = provider.getAuthorizationUrl({
       state: issued.state,
       codeChallenge: issued.challenge,
-      redirectUri: usesDevelopmentOAuth(platform) ? new URL(request.url).origin : redirectUri,
+      redirectUri: usesDevelopmentOAuth(platform) ? publicOriginFromRequest(request) : redirectUri,
     });
   } catch (error) {
     const message =
@@ -86,7 +91,7 @@ export async function GET(request: Request) {
       error instanceof SocialApiError
         ? error.code
         : "oauth";
-    return NextResponse.redirect(new URL(`/studio/accounts?error=${encodeURIComponent(message)}`, request.url));
+    return accountsRedirect(request, accountsErrorPath(message));
   }
 
   const response = NextResponse.redirect(authorizationUrl);

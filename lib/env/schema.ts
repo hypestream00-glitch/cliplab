@@ -23,6 +23,7 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL é obrigatório"),
   AUTH_SECRET: optionalString,
   AUTH_URL: optionalUrl,
+  NEXTAUTH_URL: optionalUrl,
   AUTH_GOOGLE_ID: optionalString,
   AUTH_GOOGLE_SECRET: optionalString,
   ENCRYPTION_KEY: optionalString,
