@@ -16,6 +16,7 @@ import { isUploadPostPrimary } from "@/lib/social/router";
 import { isUploadPostConfigured } from "@/lib/social/upload-post/config";
 import { syncUploadPostAccounts } from "@/lib/social/upload-post/accounts";
 import { syncUploadPostAnalytics } from "@/lib/social/upload-post/analytics";
+import { primaryAccountsConnect } from "@/lib/social/accounts-connect";
 
 const PLATFORMS = new Set<SocialPlatform>([
   "TIKTOK",
@@ -33,7 +34,9 @@ const PLATFORMS = new Set<SocialPlatform>([
 ]);
 
 export async function connectSocialNetworksAction() {
-  redirect("/api/social/upload-post/connect");
+  const target = primaryAccountsConnect();
+  if (!target) redirect("/studio/accounts");
+  redirect(target.href);
 }
 
 export async function refreshSocialAccountsAction() {

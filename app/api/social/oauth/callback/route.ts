@@ -184,7 +184,14 @@ export async function GET(request: Request) {
       error instanceof TikTokApiError || error instanceof MetaApiError || error instanceof XApiError || error instanceof YouTubeApiError
         ? error.code
         : "oauth";
-    logger.warn({ err: error, platform }, "oauth callback failed");
+    logger.warn(
+      {
+        errType: error instanceof Error ? error.name : "Error",
+        platform,
+        code: codeName,
+      },
+      "oauth callback failed",
+    );
     return clear(accountsRedirect(request, codeName));
   }
 }

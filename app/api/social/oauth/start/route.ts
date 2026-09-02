@@ -19,6 +19,7 @@ import { SocialApiError } from "@/lib/social/errors";
 import { limitAction } from "@/lib/security/action-limit";
 import { cookieSecure } from "@/lib/security/cookies";
 import { accountsErrorPath, publicOriginFromRequest, publicRedirectFromRequest } from "@/lib/env/app-url";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,6 +83,18 @@ export async function GET(request: Request) {
       codeChallenge: issued.challenge,
       redirectUri: usesDevelopmentOAuth(platform) ? publicOriginFromRequest(request) : redirectUri,
     });
+    let authorizeHost = "";
+    try {
+      authorizeHost = new URL(authorizationUrl).hostname;
+    } catch {
+      logger.warn({ platform }, "oauth start produced an invalid authorization url");
+      return accountsRedirect(request, accountsErrorPath("oauth"));
+    }
+    if (platform === "YOUTUBE" && authorizeHost !== "accounts.google.com") {
+      logger.warn({ platform, authorizeHost }, "youtube oauth host unexpected");
+      return accountsRedirect(request, accountsErrorPath("oauth"));
+    }
+    logger.info({ platform, authorizeHost, redirectUri }, "oauth start redirect");
   } catch (error) {
     const message =
       error instanceof TikTokApiError ||
@@ -91,6 +104,7 @@ export async function GET(request: Request) {
       error instanceof SocialApiError
         ? error.code
         : "oauth";
+    logger.warn({ errType: error instanceof Error ? error.name : "Error", platform, code: message }, "oauth start failed");
     return accountsRedirect(request, accountsErrorPath(message));
   }
 

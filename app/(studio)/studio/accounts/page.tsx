@@ -28,8 +28,17 @@ import { isUploadPostPrimary } from "@/lib/social/router";
 import { isUploadPostConfigured } from "@/lib/social/upload-post/config";
 import { ensureUploadPostProfile } from "@/lib/social/upload-post/profiles";
 import { syncUploadPostAccounts } from "@/lib/social/upload-post/accounts";
-import { UploadPostPlanError } from "@/lib/social/upload-post/errors";
+import { UploadPostApiError, UploadPostPlanError } from "@/lib/social/upload-post/errors";
 import { visibleSocialAccountWhere } from "@/lib/data/visibility";
+import { logger } from "@/lib/logger";
+import {
+  NATIVE_OAUTH_PLATFORMS,
+  primaryAccountsConnect,
+  secondaryAccountsConnect,
+  shouldPrepareUploadPostProfileOnAccountsLoad,
+  shouldSurfaceUploadPostProfileError,
+  uploadPostGridPlatforms,
+} from "@/lib/social/accounts-connect";
 import {
   CAPABILITY_LABELS,
   ECOSYSTEM_PLATFORMS,
@@ -78,17 +87,30 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
   const connectStatus = typeof query.connect_status === "string" ? query.connect_status : "";
   const unified = isUploadPostPrimary();
   const configured = isUploadPostConfigured();
+  const primaryConnect = primaryAccountsConnect();
+  const secondaryConnect = secondaryAccountsConnect();
   const justConnected = connected === "1" || connectStatus === "success";
   let profileError = "";
-  if (unified && configured) {
+  if (shouldPrepareUploadPostProfileOnAccountsLoad()) {
     try {
       await ensureUploadPostProfile(workspace.id);
       await syncUploadPostAccounts(workspace.id);
     } catch (err) {
-      profileError =
-        err instanceof UploadPostPlanError
-          ? err.message
-          : "Não foi possível preparar o perfil de redes sociais. Tente Atualizar contas.";
+      logger.warn(
+        {
+          errType: err instanceof Error ? err.name : "Error",
+          status: err instanceof UploadPostApiError ? err.status : undefined,
+          errorCode: err instanceof UploadPostApiError ? err.code : undefined,
+          provider: "UPLOAD_POST",
+        },
+        "upload-post profile prepare failed",
+      );
+      if (shouldSurfaceUploadPostProfileError()) {
+        profileError =
+          err instanceof UploadPostPlanError
+            ? err.message
+            : "Não foi possível preparar o perfil de redes sociais. Tente Atualizar contas.";
+      }
     }
   }
   const accounts = await prisma.socialAccount.findMany({
@@ -103,22 +125,31 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
         title="Contas sociais"
         description="Conecte suas redes para publicar e agendar seus clips."
           actions={
-            configured ? (
+            primaryConnect || configured ? (
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" asChild>
-                  <a href="/api/social/upload-post/connect">+ Conectar conta</a>
-                </Button>
-                <form action={refreshSocialAccountsAction}>
-                  <Button size="sm" variant="outline" type="submit">
-                    Atualizar contas
+                {primaryConnect ? (
+                  <Button size="sm" asChild>
+                    <a href={primaryConnect.href}>+ {primaryConnect.label}</a>
                   </Button>
-                </form>
+                ) : null}
+                {secondaryConnect ? (
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={secondaryConnect.href}>{secondaryConnect.label}</a>
+                  </Button>
+                ) : null}
+                {configured ? (
+                  <form action={refreshSocialAccountsAction}>
+                    <Button size="sm" variant="outline" type="submit">
+                      Atualizar contas
+                    </Button>
+                  </form>
+                ) : null}
               </div>
             ) : null
           }
         />
         <ConnectSuccessToast show={justConnected} accountCount={accounts.length} />
-        {configured ? null : (
+        {primaryConnect || configured ? null : (
           <div className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-[13px]">
             <p className="font-medium">Ainda não é possível conectar redes</p>
             <p className="text-muted-foreground">Peça ao administrador para concluir a configuração.</p>
@@ -129,11 +160,17 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
         {accounts.length === 0 ? (
           <EmptyState
             title="Nenhuma conta conectada."
-            description={configured ? "Clique em Conectar conta e autorize as plataformas." : "Conecte uma rede social para publicar seus clips."}
+            description={
+              primaryConnect?.provider === "YOUTUBE"
+                ? "Clique em Conectar conta e autorize o YouTube na sua conta Google."
+                : configured
+                  ? "Clique em Conectar conta e autorize as plataformas."
+                  : "Conecte uma rede social para publicar seus clips."
+            }
           />
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {PLATFORMS.map((platform) => {
+          {uploadPostGridPlatforms(accounts).map((platform) => {
             const platformAccounts = accounts.filter((account) => account.platform === platform);
             const capabilities = PLATFORM_CAPABILITIES[platform];
             return (
@@ -212,10 +249,10 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
         </div>
         <h2 className="mt-8 mb-3 text-[14px] font-semibold">Plataformas nativas</h2>
         <p className="mb-3 text-[12px] text-muted-foreground">
-          Twitch, Kick e Bilibili usam OAuth oficial separado do Upload-Post. Tokens ficam só no servidor.
+          YouTube, Twitch, Kick e Bilibili usam OAuth oficial separado do Upload-Post. Tokens ficam só no servidor.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {(["TWITCH", "KICK", "BILIBILI"] as const).map((platform) => {
+          {NATIVE_OAUTH_PLATFORMS.map((platform) => {
             const platformAccounts = accounts.filter((account) => account.platform === platform);
             const caps = getPlatformCapabilities(platform);
             const needs = platformNeedsConfig(platform);
@@ -255,7 +292,9 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
                 </div>
                 <div className="mt-3">
                   {needs ? (
-                    platform === "TWITCH" ? (
+                    platform === "YOUTUBE" ? (
+                      <YouTubeConfigNotice />
+                    ) : platform === "TWITCH" ? (
                       <TwitchConfigNotice />
                     ) : platform === "KICK" ? (
                       <KickConfigNotice />
@@ -264,7 +303,11 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
                     )
                   ) : (
                     <Button size="sm" asChild>
-                      <Link href={`/api/social/oauth/start?platform=${platform}`}>Conectar {socialPlatformLabel(platform)}</Link>
+                      {platform === "YOUTUBE" ? (
+                        <a href={`/api/social/oauth/start?platform=${platform}`}>Conectar {socialPlatformLabel(platform)}</a>
+                      ) : (
+                        <Link href={`/api/social/oauth/start?platform=${platform}`}>Conectar {socialPlatformLabel(platform)}</Link>
+                      )}
                     </Button>
                   )}
                 </div>

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { requireWorkspaceContext } from "@/lib/auth/session";
 import { isUploadPostConfigured } from "@/lib/social/upload-post/config";
 import { generateUploadPostConnectUrl } from "@/lib/social/upload-post/connect";
-import { UploadPostConfigError, UploadPostPlanError } from "@/lib/social/upload-post/errors";
+import { UploadPostApiError, UploadPostConfigError, UploadPostPlanError } from "@/lib/social/upload-post/errors";
+import { logger } from "@/lib/logger";
 import { PlanLimitError, assertSocialAccountLimit } from "@/lib/billing/usage";
 import { accountsErrorPath, publicRedirectFromRequest } from "@/lib/env/app-url";
 
@@ -34,6 +35,15 @@ export async function GET(request: Request) {
     if (error instanceof UploadPostConfigError) {
       return accountsError(request, "upload-post-config");
     }
+    logger.warn(
+      {
+        errType: error instanceof Error ? error.name : "Error",
+        status: error instanceof UploadPostApiError ? error.status : undefined,
+        errorCode: error instanceof UploadPostApiError ? error.code : undefined,
+        provider: "UPLOAD_POST",
+      },
+      "upload-post connect failed",
+    );
     return accountsError(request, "invalid-connect-url");
   }
 }
