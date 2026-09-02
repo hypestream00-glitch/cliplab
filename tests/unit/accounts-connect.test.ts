@@ -104,7 +104,7 @@ describe("studio accounts connect routing", () => {
     expect(() => assertUploadPostAccessUrl("https://app.upload-post.com/connect")).toThrow(/token/);
   });
 
-  it("reads Google OAuth client id at runtime via runtimeEnv, not build-time process.env.NAME", () => {
+  it("reads Google OAuth client id at request time via live process env keys", () => {
     vi.stubEnv("GOOGLE_CLIENT_ID", " runtime-google-id ");
     vi.stubEnv("GOOGLE_CLIENT_SECRET", "runtime-secret");
     expect(runtimeEnv("GOOGLE_CLIENT_ID")).toBe("runtime-google-id");
@@ -113,11 +113,15 @@ describe("studio accounts connect routing", () => {
     expect(isYouTubeConfigured()).toBe(true);
     const youtubeConfig = readFileSync(path.resolve("lib/social/youtube/config.ts"), "utf8");
     const runtime = readFileSync(path.resolve("lib/env/runtime.ts"), "utf8");
+    const requestEnv = readFileSync(path.resolve("lib/env/request-env.ts"), "utf8");
     expect(youtubeConfig).not.toMatch(/process\.env\.GOOGLE_CLIENT_ID/);
     expect(youtubeConfig).not.toMatch(/process\.env\.GOOGLE_CLIENT_SECRET/);
-    expect(youtubeConfig).toContain("firstRuntimeEnv");
-    expect(runtime).toContain('from "node:process"');
-    expect(runtime).toContain("bag[name]");
+    expect(youtubeConfig).toContain("googleOAuthIdFromProcessEnv");
+    expect(runtime).not.toContain('from "node:process"');
+    expect(runtime).toContain("readLiveEnv");
+    expect(requestEnv).toContain("Object.keys(env)");
+    expect(requestEnv).toContain('Reflect.get(globalThis, "process")');
+    expect(requestEnv).not.toMatch(/process\.env\.GOOGLE_CLIENT_ID/);
   });
 
   it("wires the accounts page CTA to native YouTube, not Upload-Post", () => {
@@ -125,10 +129,13 @@ describe("studio accounts connect routing", () => {
     const actions = readFileSync(path.resolve("app/(studio)/studio/accounts/actions.ts"), "utf8");
     const start = readFileSync(path.resolve("app/api/social/oauth/start/route.ts"), "utf8");
     const connect = readFileSync(path.resolve("app/api/social/upload-post/connect/route.ts"), "utf8");
+    const envCheck = readFileSync(path.resolve("app/api/social/oauth/env-check/route.ts"), "utf8");
     expect(page).toContain("YOUTUBE_NATIVE_CONNECT_HREF");
     expect(page).toContain("<a href={YOUTUBE_NATIVE_CONNECT_HREF}>+ Conectar conta</a>");
     expect(page).not.toContain("primaryConnect.href");
     expect(page).not.toContain('href="/api/social/upload-post/connect"');
+    expect(page).not.toContain("YouTubeConfigNotice");
+    expect(page).not.toContain('platformNeedsConfig("YOUTUBE")');
     expect(connect).toContain('accountsError(request, "invalid-connect-url")');
     expect(start).not.toContain("invalid-connect-url");
     expect(YOUTUBE_NATIVE_CONNECT_HREF).toBe("/api/social/oauth/start?platform=YOUTUBE");
@@ -138,9 +145,16 @@ describe("studio accounts connect routing", () => {
     expect(start).toContain("logGoogleOAuthEnvPresence");
     expect(start).toContain("GOOGLE_CLIENT_ID_PRESENT");
     expect(start).toContain("GOOGLE_CLIENT_SECRET_PRESENT");
-    expect(start).toContain("isYouTubeConfigured");
+    expect(start).toContain("googleOAuthIdFromProcessEnv");
+    expect(start).toContain("readLiveEnv");
+    expect(start).not.toContain("isYouTubeConfigured");
+    expect(start).not.toMatch(/process\.env\.GOOGLE_CLIENT_ID/);
+    expect(start).not.toMatch(/env\.GOOGLE_CLIENT_ID/);
     expect(page).toContain('export const dynamic = "force-dynamic"');
     expect(page).toContain("await connection()");
+    expect(envCheck).toContain("googleClientIdPresent");
+    expect(envCheck).toContain("googleClientSecretPresent");
+    expect(envCheck).not.toContain("GOOGLE_CLIENT_ID_PRESENT=");
     expect(LOG_REDACT_PATHS).toContain("GOOGLE_CLIENT_SECRET");
     expect(LOG_REDACT_PATHS).toContain("UPLOAD_POST_API_KEY");
   });

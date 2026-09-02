@@ -1,13 +1,11 @@
-import { env as nodeProcessEnv } from "node:process";
+import { readLiveEnv } from "@/lib/env/request-env";
 
 /**
  * Runtime env access that bundlers cannot replace with build-time constants.
- * Always index a live env bag with a function argument — never `process.env.NAME`.
+ * Reads the live process env bag by key name on every call.
  */
 export function runtimeEnv(name: string): string {
-  const bag = nodeProcessEnv;
-  const value = bag[name];
-  return typeof value === "string" ? value.trim() : "";
+  return readLiveEnv(name);
 }
 
 export function runtimeEnvPresent(name: string): boolean {
@@ -29,10 +27,4 @@ export function logWorkerEnvPresence() {
   process.stdout.write(`AUTH_URL PRESENT: ${runtimeEnvPresent("AUTH_URL")}\n`);
 }
 
-/** Presence only. Never log client id or secret values. */
-export function logGoogleOAuthEnvPresence() {
-  const idPresent = runtimeEnvPresent("GOOGLE_CLIENT_ID");
-  const secretPresent = runtimeEnvPresent("GOOGLE_CLIENT_SECRET");
-  process.stdout.write(`GOOGLE_CLIENT_ID_PRESENT=${idPresent}\n`);
-  process.stdout.write(`GOOGLE_CLIENT_SECRET_PRESENT=${secretPresent}\n`);
-}
+export { logGoogleOAuthEnvPresence } from "@/lib/env/request-env";

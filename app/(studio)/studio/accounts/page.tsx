@@ -14,7 +14,7 @@ import {
   syncXAccountAction,
   syncYouTubeAccountAction,
 } from "@/app/(studio)/studio/accounts/actions";
-import { DisconnectAccountButton, MetaConfigNotice, TikTokConfigNotice, XConfigNotice, YouTubeConfigNotice, TwitchConfigNotice, KickConfigNotice, BilibiliConfigNotice } from "@/components/accounts/tiktok-account-actions";
+import { DisconnectAccountButton, MetaConfigNotice, TikTokConfigNotice, XConfigNotice, TwitchConfigNotice, KickConfigNotice, BilibiliConfigNotice } from "@/components/accounts/tiktok-account-actions";
 import { ConnectSuccessToast } from "@/components/accounts/connect-success-toast";
 import { platformNeedsConfig } from "@/lib/social/oauth";
 import { tiktokContentPostingStatus, tiktokOAuthStatus } from "@/lib/social/tiktok/config";
@@ -241,7 +241,7 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
           {NATIVE_OAUTH_PLATFORMS.map((platform) => {
             const platformAccounts = accounts.filter((account) => account.platform === platform);
             const caps = getPlatformCapabilities(platform);
-            const needs = platformNeedsConfig(platform);
+            const needs = platform === "YOUTUBE" ? false : platformNeedsConfig(platform);
             return (
               <article key={platform} id={platform.toLowerCase()} className="rounded-2xl border border-border bg-card p-5">
                 <div className="flex items-start justify-between gap-3">
@@ -278,9 +278,7 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
                 </div>
                 <div className="mt-3">
                   {needs ? (
-                    platform === "YOUTUBE" ? (
-                      <YouTubeConfigNotice />
-                    ) : platform === "TWITCH" ? (
+                    platform === "TWITCH" ? (
                       <TwitchConfigNotice />
                     ) : platform === "KICK" ? (
                       <KickConfigNotice />
@@ -290,7 +288,7 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
                   ) : (
                     <Button size="sm" asChild>
                       {platform === "YOUTUBE" ? (
-                        <a href={`/api/social/oauth/start?platform=${platform}`}>Conectar {socialPlatformLabel(platform)}</a>
+                        <a href={YOUTUBE_NATIVE_CONNECT_HREF}>Conectar {socialPlatformLabel(platform)}</a>
                       ) : (
                         <Link href={`/api/social/oauth/start?platform=${platform}`}>Conectar {socialPlatformLabel(platform)}</Link>
                       )}
@@ -308,7 +306,6 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
   const tiktokNeedsConfig = platformNeedsConfig("TIKTOK");
   const metaNeedsConfig = platformNeedsConfig("INSTAGRAM");
   const xNeedsConfig = platformNeedsConfig("X");
-  const youtubeNeedsConfig = platformNeedsConfig("YOUTUBE");
   const twitchNeedsConfig = platformNeedsConfig("TWITCH");
   const kickNeedsConfig = platformNeedsConfig("KICK");
   const bilibiliNeedsConfig = platformNeedsConfig("BILIBILI");
@@ -346,7 +343,6 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
             (platform === "TIKTOK" && tiktokNeedsConfig) ||
             ((platform === "INSTAGRAM" || platform === "FACEBOOK") && metaNeedsConfig) ||
             (platform === "X" && xNeedsConfig) ||
-            (platform === "YOUTUBE" && youtubeNeedsConfig) ||
             (platform === "TWITCH" && twitchNeedsConfig) ||
             (platform === "KICK" && kickNeedsConfig) ||
             (platform === "BILIBILI" && bilibiliNeedsConfig);
@@ -485,8 +481,6 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
                   <MetaConfigNotice platform={platform} />
                 ) : platform === "X" && xNeedsConfig ? (
                   <XConfigNotice />
-                ) : platform === "YOUTUBE" && youtubeNeedsConfig ? (
-                  <YouTubeConfigNotice />
                 ) : platform === "TWITCH" && twitchNeedsConfig ? (
                   <TwitchConfigNotice />
                 ) : platform === "KICK" && kickNeedsConfig ? (
@@ -495,23 +489,25 @@ export default async function AccountsPage({ searchParams }: PageSearchProps) {
                   <BilibiliConfigNotice />
                 ) : official ? (
                   <Button size="sm" asChild>
-                    <Link href={`/api/social/oauth/start?platform=${platform}`}>
-                      {platform === "INSTAGRAM"
-                        ? "Conectar Instagram"
-                        : platform === "FACEBOOK"
-                          ? "Conectar Facebook"
-                          : platform === "X"
-                            ? platformAccounts.some((account) => !account.mock)
-                              ? "Conectar outra"
-                              : "Conectar X"
-                            : platform === "YOUTUBE"
+                    {platform === "YOUTUBE" ? (
+                      <a href={YOUTUBE_NATIVE_CONNECT_HREF}>
+                        {platformAccounts.some((account) => !account.mock) ? "Conectar outro canal" : "Conectar YouTube"}
+                      </a>
+                    ) : (
+                      <Link href={`/api/social/oauth/start?platform=${platform}`}>
+                        {platform === "INSTAGRAM"
+                          ? "Conectar Instagram"
+                          : platform === "FACEBOOK"
+                            ? "Conectar Facebook"
+                            : platform === "X"
                               ? platformAccounts.some((account) => !account.mock)
-                                ? "Conectar outro canal"
-                                : "Conectar YouTube"
+                                ? "Conectar outra"
+                                : "Conectar X"
                               : platformAccounts.length
                                 ? "Conectar outra"
                                 : "Conectar"}
-                    </Link>
+                      </Link>
+                    )}
                   </Button>
                 ) : (
                   <p className="text-[12px] text-muted-foreground">Não disponível nesta versão.</p>

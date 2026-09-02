@@ -20,11 +20,16 @@ import { limitAction } from "@/lib/security/action-limit";
 import { cookieSecure } from "@/lib/security/cookies";
 import { accountsErrorPath, publicOriginFromRequest, publicRedirectFromRequest } from "@/lib/env/app-url";
 import { logger } from "@/lib/logger";
-import { logGoogleOAuthEnvPresence } from "@/lib/env/runtime";
-import { isYouTubeConfigured, youtubeGoogleCredentialPresence } from "@/lib/social/youtube/config";
+import {
+  googleOAuthIdFromProcessEnv,
+  googleOAuthSecretFromProcessEnv,
+  logGoogleOAuthEnvPresence,
+  readLiveEnv,
+} from "@/lib/env/request-env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 function accountsRedirect(request: Request, path: string) {
   return NextResponse.redirect(publicRedirectFromRequest(path, request));
@@ -52,16 +57,13 @@ export async function GET(request: Request) {
     return accountsRedirect(request, accountsErrorPath("x-config"));
   }
   if (platform === "YOUTUBE") {
+    const googleClientId = googleOAuthIdFromProcessEnv();
+    const googleClientSecret = googleOAuthSecretFromProcessEnv();
+    const GOOGLE_CLIENT_ID_PRESENT = readLiveEnv("GOOGLE_CLIENT_ID").length > 0;
+    const GOOGLE_CLIENT_SECRET_PRESENT = readLiveEnv("GOOGLE_CLIENT_SECRET").length > 0;
     logGoogleOAuthEnvPresence();
-    const presence = youtubeGoogleCredentialPresence();
-    logger.info(
-      {
-        GOOGLE_CLIENT_ID_PRESENT: presence.GOOGLE_CLIENT_ID_PRESENT,
-        GOOGLE_CLIENT_SECRET_PRESENT: presence.GOOGLE_CLIENT_SECRET_PRESENT,
-      },
-      "youtube oauth env",
-    );
-    if (!isYouTubeConfigured()) {
+    logger.info({ GOOGLE_CLIENT_ID_PRESENT, GOOGLE_CLIENT_SECRET_PRESENT }, "youtube oauth env");
+    if (!googleClientId || !googleClientSecret) {
       return accountsRedirect(request, accountsErrorPath("youtube-config"));
     }
   }

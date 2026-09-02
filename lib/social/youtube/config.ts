@@ -1,5 +1,5 @@
 import { envTruthy } from "@/lib/env/status";
-import { firstRuntimeEnv, runtimeEnvPresent } from "@/lib/env/runtime";
+import { googleOAuthIdFromProcessEnv, googleOAuthSecretFromProcessEnv } from "@/lib/env/request-env";
 import { oauthCallbackUrl } from "@/lib/env/app-url";
 
 export const GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -15,15 +15,12 @@ export const YOUTUBE_SCOPES = [
 
 export const YOUTUBE_ANALYTICS_SCOPE = "https://www.googleapis.com/auth/yt-analytics.readonly";
 
-const GOOGLE_CLIENT_ID_KEYS = ["GOOGLE_CLIENT_ID", "YOUTUBE_CLIENT_ID", "AUTH_GOOGLE_ID"] as const;
-const GOOGLE_CLIENT_SECRET_KEYS = ["GOOGLE_CLIENT_SECRET", "YOUTUBE_CLIENT_SECRET", "AUTH_GOOGLE_SECRET"] as const;
-
 export function youtubeClientId() {
-  return firstRuntimeEnv(GOOGLE_CLIENT_ID_KEYS);
+  return googleOAuthIdFromProcessEnv();
 }
 
 export function youtubeClientSecret() {
-  return firstRuntimeEnv(GOOGLE_CLIENT_SECRET_KEYS);
+  return googleOAuthSecretFromProcessEnv();
 }
 
 export function youtubeRedirectUri() {
@@ -54,11 +51,4 @@ export function youtubeScopes() {
   const scopes: string[] = [...YOUTUBE_SCOPES];
   if (envTruthy("YOUTUBE_ANALYTICS_SCOPE")) scopes.push(YOUTUBE_ANALYTICS_SCOPE);
   return scopes;
-}
-
-export function youtubeGoogleCredentialPresence() {
-  return {
-    GOOGLE_CLIENT_ID_PRESENT: runtimeEnvPresent("GOOGLE_CLIENT_ID"),
-    GOOGLE_CLIENT_SECRET_PRESENT: runtimeEnvPresent("GOOGLE_CLIENT_SECRET"),
-  };
 }
