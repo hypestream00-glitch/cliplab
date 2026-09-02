@@ -51,6 +51,9 @@ const nextConfig: NextConfig = {
       { source: "/ready", destination: "/api/ready" },
     ];
   },
+  async redirects() {
+    return [{ source: "/trending", destination: "/studio/trending", permanent: false }];
+  },
 };
 
 export default nextConfig;

@@ -3,22 +3,15 @@ import { computeTrendScore } from "@/lib/trending/score";
 import { TRENDING_CATEGORIES, TRENDING_PLATFORMS } from "@/lib/competitions/platforms";
 import { isKickTrendingConfigured, isTwitchTrendingConfigured, isYouTubeTrendingConfigured } from "@/lib/trending/providers";
 import { resolvePlatformCapabilities } from "@/lib/platforms/capabilities";
+import { sortTrendingItems, trendingListWhere, type TrendingListParams } from "@/lib/trending/filters";
 
 export { TRENDING_CATEGORIES, TRENDING_PLATFORMS };
+export { sortTrendingItems, trendingListWhere };
+export type { TrendingListParams };
 
-export async function listTrendingItems(params: {
-  platform?: string;
-  category?: string;
-  sort?: string;
-  region?: string;
-}) {
+export async function listTrendingItems(params: TrendingListParams) {
   const items = await prisma.trendingItem.findMany({
-    where: {
-      active: true,
-      platform: params.platform && params.platform !== "ALL" ? params.platform : undefined,
-      category: params.category && params.category !== "ALL" ? params.category : undefined,
-      region: params.region && params.region !== "ALL" && params.region !== "GLOBAL" ? params.region : undefined,
-    },
+    where: trendingListWhere(params),
     include: { scores: { orderBy: { computedAt: "desc" }, take: 1 } },
     take: 60,
   });
@@ -33,16 +26,7 @@ export async function listTrendingItems(params: {
     });
     return { ...item, trendScore: computed.score, trendInputs: computed.inputs };
   });
-  const sort = params.sort ?? "hot";
-  scored.sort((a, b) => {
-    if (sort === "views") return (b.viewCount ?? -1) - (a.viewCount ?? -1);
-    if (sort === "fast") return (b.views24h ?? -1) - (a.views24h ?? -1);
-    if (sort === "recent") {
-      return (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0);
-    }
-    return (b.trendScore ?? -1) - (a.trendScore ?? -1);
-  });
-  return scored;
+  return sortTrendingItems(scored, params.sort ?? "hot");
 }
 
 export function trendingProviderAvailability(source: NodeJS.ProcessEnv = process.env) {

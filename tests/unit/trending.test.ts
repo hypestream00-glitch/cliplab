@@ -4,6 +4,7 @@ import path from "node:path";
 import { computeTrendScore } from "@/lib/trending/score";
 import { TRENDING_CATEGORIES, TRENDING_PLATFORMS } from "@/lib/competitions/platforms";
 import { studioNavGroups } from "@/lib/config/navigation";
+import { sortTrendingItems, trendingListWhere } from "@/lib/trending/filters";
 
 describe("trend score", () => {
   it("returns null when there is no real data", () => {
@@ -34,7 +35,9 @@ describe("trending page and filters", () => {
     expect(page).toContain("✨ Criar clips");
     expect(page).toContain("Fonte ainda não disponível");
     expect(page).toContain("Conecte uma fonte de tendências");
+    expect(page).toContain("ensureYouTubeTrendingCatalog");
     expect(page).not.toContain("scrape");
+    expect(page).not.toContain("NEXT_PUBLIC_YOUTUBE");
     expect(TRENDING_PLATFORMS).toEqual(["YOUTUBE", "TWITCH", "BILIBILI", "KICK", "TIKTOK", "INSTAGRAM"]);
     expect(TRENDING_CATEGORIES).toContain("Games");
   });
@@ -45,5 +48,34 @@ describe("trending page and filters", () => {
     expect(hrefs).toContain("/studio/competitions");
     expect(hrefs.indexOf("/studio/trending")).toBeLessThan(hrefs.indexOf("/studio/projects"));
     expect(hrefs.indexOf("/studio/accounts")).toBeLessThan(hrefs.indexOf("/studio/competitions"));
+  });
+});
+
+describe("trending filters and sort", () => {
+  it("does not drop youtube items missing growthRate or viralScore when sorting hot", () => {
+    const items = [
+      {
+        id: "a",
+        viewCount: 10_000,
+        views24h: null,
+        publishedAt: new Date("2026-09-01T12:00:00Z"),
+        trendScore: 40,
+      },
+      {
+        id: "b",
+        viewCount: 50_000,
+        views24h: null,
+        publishedAt: new Date("2026-08-01T12:00:00Z"),
+        trendScore: null,
+      },
+    ];
+    const sorted = sortTrendingItems(items, "hot");
+    expect(sorted).toHaveLength(2);
+    expect(sorted.map((item) => item.id)).toEqual(["a", "b"]);
+  });
+
+  it("keeps twitch rows when listing all platforms with a youtube region", () => {
+    const where = trendingListWhere({ platform: "ALL", region: "BR" });
+    expect(where.OR).toEqual([{ platform: "YOUTUBE", region: "BR" }, { platform: { not: "YOUTUBE" } }]);
   });
 });

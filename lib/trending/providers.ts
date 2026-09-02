@@ -10,6 +10,7 @@ export type TrendingProviderItem = {
   thumbnailUrl?: string | null;
   canonicalUrl: string;
   viewCount?: number | null;
+  likeCount?: number | null;
   engagement?: number | null;
   publishedAt?: Date | null;
   durationSeconds?: number | null;
@@ -19,10 +20,18 @@ export type TrendingProviderItem = {
   channelId?: string | null;
 };
 
+export type TrendingProviderError = {
+  httpStatus: number | null;
+  reason: string;
+  code: string | null;
+  message: string;
+};
+
 export type TrendingProviderResult = {
   platform: TrendingProviderItem["platform"];
   available: boolean;
   reason?: string;
+  error?: TrendingProviderError;
   items: TrendingProviderItem[];
 };
 

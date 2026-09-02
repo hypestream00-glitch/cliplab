@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { requireWorkspaceContext } from "@/lib/auth/session";
 import { listTrendingItems, trendingProviderAvailability } from "@/lib/trending/query";
+import { ensureYouTubeTrendingCatalog } from "@/lib/trending/refresh";
 import { TRENDING_CATEGORIES, TRENDING_PLATFORMS, YOUTUBE_TRENDING_REGIONS } from "@/lib/competitions/platforms";
 import { formatNumber, formatDate, formatDuration } from "@/lib/utils/format";
 import { TrendingHeroArt } from "@/components/trending/hero-art";
 import { classifyIngestUrl } from "@/lib/ingest/classify";
 import { resolvePlatformCapabilities, trendingUnavailableReason, type EcosystemPlatform } from "@/lib/platforms/capabilities";
 import { PlatformLimitedBadge } from "@/components/platforms/capability-badge";
+import { trendingFetchDepsFromEnv } from "@/lib/trending/providers";
 import type { PageSearchProps } from "@/types/routes";
 
 export const metadata = { title: "Em alta" };
@@ -33,14 +35,26 @@ export default async function TrendingPage({ searchParams }: PageSearchProps) {
   const category = typeof params.category === "string" ? params.category : "ALL";
   const sort = typeof params.sort === "string" ? params.sort : "hot";
   const region = typeof params.region === "string" ? params.region : "BR";
+  const availability = trendingProviderAvailability();
+  const capabilities = resolvePlatformCapabilities();
+  let youtubeSourceError: string | undefined;
+  if ((platform === "YOUTUBE" || platform === "ALL") && availability.YOUTUBE) {
+    const youtube = await ensureYouTubeTrendingCatalog({
+      ...trendingFetchDepsFromEnv(),
+      region,
+      youtubeCategoryId: "",
+    });
+    if (youtube.error?.message) youtubeSourceError = youtube.error.message;
+    else if (!youtube.available && youtube.reason && youtube.reason !== "YOUTUBE_API_KEY ausente") {
+      youtubeSourceError = youtube.reason;
+    }
+  }
   const items = await listTrendingItems({
     platform,
     category,
     sort,
     region: platform === "YOUTUBE" || platform === "ALL" ? region : undefined,
   });
-  const availability = trendingProviderAvailability();
-  const capabilities = resolvePlatformCapabilities();
   const anySource = availability.YOUTUBE || availability.TWITCH || availability.KICK;
   const isAdmin = user?.role === "SUPER_ADMIN";
   const href = (next: Record<string, string>) => {
@@ -150,6 +164,12 @@ export default async function TrendingPage({ searchParams }: PageSearchProps) {
             : platform === "YOUTUBE" && capabilities.YOUTUBE.trending !== "AVAILABLE"
               ? "Recurso ainda não disponível para esta plataforma."
               : "Fonte ainda não disponível"}
+        </p>
+      ) : null}
+
+      {youtubeSourceError && platform === "YOUTUBE" ? (
+        <p className="mb-6 rounded-2xl border border-magenta/30 bg-magenta/5 px-4 py-3 text-[13px] text-white">
+          {youtubeSourceError}
         </p>
       ) : null}
 
